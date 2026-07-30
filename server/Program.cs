@@ -11,7 +11,7 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Todas las columnas de fecha/hora se guardan en UTC; este handler evita que Dapper
-// las devuelva como DateTimeKind.Unspecified (lo que el navegador interpretaría como
+// las devuelva como DateTimeKind.Unspecified (lo que el navegador intA3HUBretaría como
 // hora local en vez de UTC). Ver shared/Repositories/UtcDateTimeHandler.cs.
 SqlMapper.AddTypeHandler(new UtcDateTimeHandler());
 
@@ -41,7 +41,9 @@ builder.Services.AddCors(options =>
                   "http://localhost:64078",
                   "https://localhost:64078",
                   "https://a3-hub.com",
-                  "https://www.a3-hub.com")
+                  "https://www.a3-hub.com",
+                  "https://a3hub-c4adc8addnc3dxd2.centralus-01.azurewebsites.net/"
+                  )
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
@@ -92,7 +94,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title       = "ERP API",
+        Title       = "A3HUB API",
         Version     = "v1",
         Description = "API REST. Autentíquese en /api/auth/login y use el token JWT en el botón Authorize."
     });
@@ -129,7 +131,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "ERP API v1");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "A3HUB API v1");
         options.RoutePrefix = "swagger";
     });
 }
