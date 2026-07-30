@@ -39,7 +39,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowClient", policy =>
         policy.WithOrigins(
                   "http://localhost:64078",
-                  "https://localhost:64078")
+                  "https://localhost:64078",
+                  "https://a3-hub.com",
+                  "https://www.a3-hub.com")
               .AllowAnyHeader()
               .AllowAnyMethod()));
 

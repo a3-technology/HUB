@@ -2,6 +2,10 @@ import { tokenStore } from './tokenStore'
 
 const REFRESH_KEY = 'hub_refresh_token'
 
+// URL base del API en producción (App Service). En desarrollo queda vacía y las
+// peticiones relativas '/api/...' pasan por el proxy de Vite (vite.config.ts).
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? ''
+
 // El backend rota el refresh token en cada uso (revoca el anterior). Si dos
 // llamadas concurrentes intentan refrescar con el mismo token, la segunda
 // siempre falla porque la primera ya lo revocó. Para evitar esa carrera
@@ -21,7 +25,7 @@ async function doRefresh(): Promise<boolean> {
   const refreshToken = localStorage.getItem(REFRESH_KEY)
   if (!refreshToken) return false
 
-  const res = await fetch('/api/auth/refresh', {
+  const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
@@ -48,13 +52,14 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
   if (!(init.body instanceof FormData))
     headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json')
 
-  let res = await fetch(input, { ...init, headers })
+  const url = input.startsWith('/') ? `${API_BASE_URL}${input}` : input
+  let res = await fetch(url, { ...init, headers })
 
   if (res.status === 401) {
     const refreshed = await tryRefresh()
     if (refreshed) {
       headers.set('Authorization', `Bearer ${tokenStore.get()}`)
-      res = await fetch(input, { ...init, headers })
+      res = await fetch(url, { ...init, headers })
     }
   }
 
@@ -1364,7 +1369,7 @@ export const usersApi = {
 
 export const authApi = {
   login: async (email: string, password: string) => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
