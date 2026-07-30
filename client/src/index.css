@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+.toast-enter {
+  animation: toast-in 0.2s ease-out forwards;
+}
+
+@keyframes modal-overlay-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes modal-panel-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+@keyframes modal-panel-out {
+  from { opacity: 1; transform: scale(1)    translateY(0);   }
+  to   { opacity: 0; transform: scale(0.95) translateY(8px); }
+}
+
+.modal-overlay-enter { animation: modal-overlay-in 0.2s ease-out forwards; }
+.modal-overlay-exit  { animation: modal-overlay-out 0.15s ease-in forwards; }
+.modal-panel-enter   { animation: modal-panel-in 0.2s ease-out forwards; }
+.modal-panel-exit    { animation: modal-panel-out 0.15s ease-in forwards; }
+
+@keyframes offcanvas-panel-in  { from { transform: translateX(100%); } to   { transform: translateX(0);    } }
+@keyframes offcanvas-panel-out { from { transform: translateX(0);    } to   { transform: translateX(100%); } }
+
+.offcanvas-panel-enter { animation: offcanvas-panel-in 0.25s ease-out forwards; }
+.offcanvas-panel-exit  { animation: offcanvas-panel-out 0.2s ease-in forwards; }
+
+/* Scroll fino y discreto para TODO scroll de la app (tablas con scroll
+   horizontal, cuerpos de modal con scroll vertical, listas, etc.) en vez del
+   scrollbar nativo del navegador. Antes esto se aplicaba a mano por página
+   con clases utilitarias repetidas — quedaba inconsistente (algunos modales
+   se quedaban sin el estilo). Ahora es una sola regla global sobre las
+   convenciones "overflow-x-auto"/"overflow-y-auto" que ya usa toda la app. */
+.overflow-x-auto,
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+
+.dark .overflow-x-auto,
+.dark .overflow-y-auto {
+  scrollbar-color: var(--color-slate-600) transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background-color: var(--color-slate-300);
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-thumb,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-600);
+}
