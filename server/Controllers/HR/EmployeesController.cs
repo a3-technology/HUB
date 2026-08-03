@@ -143,6 +143,7 @@ namespace server.Controllers
             p.Add("@Phone",                string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim());
             p.Add("@Address",              string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim());
             p.Add("@BirthDate",            request.BirthDate?.Date);
+            p.Add("@CountryId",            request.CountryId);
             p.Add("@IdentificationTypeId", request.IdentificationTypeId);
             p.Add("@IdentificationNumber", request.IdentificationNumber.Trim());
             p.Add("@Salary",               request.Salary);
@@ -185,6 +186,7 @@ namespace server.Controllers
             p.Add("@Phone",                string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim());
             p.Add("@Address",              string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim());
             p.Add("@BirthDate",            request.BirthDate?.Date);
+            p.Add("@CountryId",            request.CountryId);
             p.Add("@IdentificationTypeId", request.IdentificationTypeId);
             p.Add("@IdentificationNumber", request.IdentificationNumber.Trim());
             p.Add("@Salary",               request.Salary);

@@ -158,6 +158,12 @@ export const positionsApi = {
   remove:   (id: string)                 => apiFetch(`/api/hr/positions/${id}`,        { method: 'DELETE' }),
 }
 
+// ── Módulo RR.HH. — Países (catálogo de solo lectura) ────────────────────────
+
+export const countriesApi = {
+  list: (active?: boolean) => apiFetch(active === undefined ? '/api/hr/countries' : `/api/hr/countries?active=${active}`),
+}
+
 // ── Módulo RR.HH. — Empleados ────────────────────────────────────────────────
 
 interface EmployeePayload {
@@ -171,6 +177,8 @@ interface EmployeePayload {
   address?: string | null
   /** Fecha de nacimiento (yyyy-MM-dd); null u omitida si no se registró. */
   birthDate?: string | null
+  /** País del empleado (hr.Countries); null u omitido si no se registró. */
+  countryId?: string | null
   identificationTypeId: string
   identificationNumber: string
   salary: number

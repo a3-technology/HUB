@@ -144,6 +144,9 @@ namespace shared.Models
             public string?   Address        { get; set; }
             /// <summary>Fecha de nacimiento; null si no se ha registrado.</summary>
             public DateTime? BirthDate      { get; set; }
+            /// <summary>País del empleado (hr.Countries); null si no se ha registrado.</summary>
+            public Guid?     CountryId      { get; set; }
+            public string?   CountryName    { get; set; }
             public Guid      IdentificationTypeId   { get; set; }
             public string    IdentificationTypeName { get; set; } = string.Empty;
             public string    IdentificationNumber   { get; set; } = string.Empty;
@@ -212,6 +215,9 @@ namespace shared.Models
 
             /// <summary>Fecha de nacimiento (opcional).</summary>
             public DateTime? BirthDate { get; set; }
+
+            /// <summary>País del empleado (opcional).</summary>
+            public Guid? CountryId { get; set; }
 
             [Required(ErrorMessage = "El tipo de identificación es requerido.")]
             public Guid IdentificationTypeId { get; set; }
@@ -287,6 +293,22 @@ namespace shared.Models
             public int    Success { get; set; }
             public string Message { get; set; } = string.Empty;
             public Guid?  Id      { get; set; }
+        }
+
+        // ── Países (catálogo de solo lectura, sembrado con la lista completa) ──
+
+        /// <summary>
+        /// País retornado por hr.SP_GetCountries. Catálogo sin pantalla de
+        /// administración: se elige de la lista ya sembrada, igual que Moneda.
+        /// </summary>
+        public class CountryResponse
+        {
+            public Guid      Id        { get; set; }
+            public string    Name      { get; set; } = string.Empty;
+            public string?   IsoCode   { get; set; }
+            public bool      IsActive  { get; set; }
+            public DateTime  CreatedAt { get; set; }
+            public DateTime? UpdatedAt { get; set; }
         }
 
         // ── Bancos ────────────────────────────────────────────────────────────

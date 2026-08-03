@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Search, Pencil, Eye, ToggleLeft, ToggleRight, RefreshCw, Users, Save, List, LayoutGrid, Trash2, Calendar, Building2, X, Banknote, FileText, Camera, Upload, Download, User, Briefcase, ChevronDown, FileSpreadsheet, Printer } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { employeesApi, departmentsApi, positionsApi, identificationTypesApi, currenciesApi, documentTypesApi, workModalitiesApi, contractTypesApi, banksApi } from '../../lib/api'
+import { employeesApi, departmentsApi, positionsApi, identificationTypesApi, currenciesApi, documentTypesApi, workModalitiesApi, contractTypesApi, banksApi, countriesApi } from '../../lib/api'
 import { fmtMoneyPlain } from '../../lib/format'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Pagination, usePagination, type PageSize } from '../../components/Pagination'
@@ -30,6 +30,9 @@ interface Employee {
   address?: string
   /** Fecha de nacimiento (ISO); undefined si no se ha registrado. */
   birthDate?: string
+  /** País del empleado (hr.Countries); undefined si no se ha registrado. */
+  countryId?: string
+  countryName?: string
   identificationTypeId: string
   identificationTypeName: string
   identificationNumber: string
@@ -89,6 +92,11 @@ interface CurrencyOption {
   symbol: string
 }
 
+interface CountryOption {
+  id: string
+  name: string
+}
+
 interface WorkModalityOption {
   id: string
   name: string
@@ -115,6 +123,8 @@ interface EmpForm {
   address: string
   /** Fecha de nacimiento (yyyy-MM-dd); '' si no se registró. */
   birthDate: string
+  /** País; '' si no se selecciona (opcional). */
+  countryId: string
   identificationTypeId: string
   identificationNumber: string
   salary: string
@@ -138,7 +148,7 @@ interface EmpForm {
   hireDate: string
 }
 
-const EMPTY_FORM: EmpForm = { code: '', firstName: '', lastName: '', email: '', phone: '', address: '', birthDate: '', identificationTypeId: '', identificationNumber: '', salary: '', currencyId: '', positionId: '', departmentId: '', workModalityId: '', contractTypeId: '', payUnit: 'Monthly', payFrequency: 'Monthly', workShift: '', bankId: '', bankAccountNumber: '', hireDate: '' }
+const EMPTY_FORM: EmpForm = { code: '', firstName: '', lastName: '', email: '', phone: '', address: '', birthDate: '', countryId: '', identificationTypeId: '', identificationNumber: '', salary: '', currencyId: '', positionId: '', departmentId: '', workModalityId: '', contractTypeId: '', payUnit: 'Monthly', payFrequency: 'Monthly', workShift: '', bankId: '', bankAccountNumber: '', hireDate: '' }
 
 /** Etiquetas del esquema de remuneración del contrato. */
 const PAY_UNIT_LABELS: Record<string, string> = { Monthly: 'Mensual', Hourly: 'Por hora', Service: 'Por servicio' }
@@ -263,6 +273,7 @@ export function EmpleadosPage() {
   const [workModalities, setWorkModalities] = useState<WorkModalityOption[]>([])
   const [contractTypes, setContractTypes]   = useState<ContractTypeOption[]>([])
   const [banks, setBanks]                   = useState<BankOption[]>([])
+  const [countries, setCountries]           = useState<CountryOption[]>([])
   const [loading, setLoading]         = useState(true)
   const [refreshing, setRefreshing]   = useState(false)
   const [search, setSearch]           = useState('')
@@ -758,8 +769,13 @@ export function EmpleadosPage() {
     if (res.ok) setBanks(await res.json())
   }
 
+  const loadCountries = async () => {
+    const res = await countriesApi.list(true)
+    if (res.ok) setCountries(await res.json())
+  }
+
   useEffect(() => { load(); setPage(1) }, [departmentFilterId])
-  useEffect(() => { loadDepartments(); loadPositions(); loadIdTypes(); loadCurrencies(); loadDocTypes(); loadWorkModalities(); loadContractTypes(); loadBanks() }, [])
+  useEffect(() => { loadDepartments(); loadPositions(); loadIdTypes(); loadCurrencies(); loadDocTypes(); loadWorkModalities(); loadContractTypes(); loadBanks(); loadCountries() }, [])
 
   const filterDepartment = departments.find(d => d.id === departmentFilterId)
   const clearDepartmentFilter = () => setSearchParams(prev => { prev.delete('departmentId'); return prev })
@@ -819,6 +835,7 @@ export function EmpleadosPage() {
       phone: e.phone ?? '',
       address: e.address ?? '',
       birthDate: e.birthDate ? e.birthDate.slice(0, 10) : '',
+      countryId: e.countryId ?? '',
       identificationTypeId: e.identificationTypeId,
       identificationNumber: e.identificationNumber, salary: String(e.salary),
       currencyId: e.currencyId ?? '',
@@ -989,6 +1006,7 @@ export function EmpleadosPage() {
         phone: form.phone.trim() || null,
         address: form.address.trim() || null,
         birthDate: form.birthDate || null,
+        countryId: form.countryId || null,
         identificationTypeId: form.identificationTypeId, identificationNumber: form.identificationNumber.trim(),
         salary, currencyId: form.currencyId, positionId: form.positionId,
         departmentId: form.departmentId,
@@ -1702,12 +1720,25 @@ export function EmpleadosPage() {
                     onChange={phone => setForm(f => ({ ...f, phone }))} />
                 </div>
               </div>
-              {/* Fila 4: dirección domiciliar */}
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Dirección domiciliar</label>
-                <textarea rows={3} maxLength={500} placeholder="Ej: Calle Principal #12, Sector Los Prados, Santo Domingo" value={form.address}
-                  onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none" />
+              {/* Fila 4: dirección domiciliar + país */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Dirección domiciliar</label>
+                  <textarea rows={3} maxLength={500} placeholder="Ej: Calle Principal #12, Sector Los Prados, Santo Domingo" value={form.address}
+                    onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">País</label>
+                  <SearchSelect
+                    value={form.countryId}
+                    onChange={countryId => setForm(f => ({ ...f, countryId }))}
+                    options={countries.map(c => ({ value: c.id, label: c.name }))}
+                    placeholder="Selecciona un país…"
+                    searchPlaceholder="Buscar país…"
+                    emptyLabel="No se encontraron países."
+                  />
+                </div>
               </div>
               </>)}
 
