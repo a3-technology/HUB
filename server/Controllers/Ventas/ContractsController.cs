@@ -41,7 +41,7 @@ namespace server.Controllers
         /// <param name="clientId">Filtra los contratos de un cliente específico.</param>
         /// <param name="active">true = solo activos | false = solo inactivos | omitir = todos.</param>
         /// <param name="status">Filtra por estado (Draft, Active, Expired, Terminated).</param>
-        /// <returns>200 con la lista de <see cref="Ventas.ContractResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="SAL.ContractResponse"/>.</returns>
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] Guid? clientId = null, [FromQuery] bool? active = null, [FromQuery] string? status = null)
         {
@@ -50,7 +50,7 @@ namespace server.Controllers
             p.Add("@IsActive", active.HasValue ? (object)active.Value : null);
             p.Add("@Status",   status);
 
-            var result = _repo.GetAll<Ventas.ContractResponse>("sal.SP_GetContracts", p).ToList();
+            var result = _repo.GetAll<SAL.ContractResponse>("sal.SP_GetContracts", p).ToList();
 
             foreach (var c in result)
                 c.OwnerPhotoUrl = await SignPhotoUrl(c.OwnerPhotoUrl);
@@ -62,7 +62,7 @@ namespace server.Controllers
         /// Retorna un contrato por su identificador único.
         /// </summary>
         /// <param name="id">Identificador único (GUID) del contrato.</param>
-        /// <returns>200 con <see cref="Ventas.ContractResponse"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="SAL.ContractResponse"/> o 404 si no existe.</returns>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -78,14 +78,14 @@ namespace server.Controllers
         /// Crea un nuevo contrato (manual, sin orden de venta asociada).
         /// </summary>
         /// <param name="request">Datos del contrato.</param>
-        /// <returns>200 con <see cref="Ventas.SP_SalesContractResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="SAL.SP_SalesContractResult"/> o 400 si hay error.</returns>
         [HttpPost]
         [RequirePermission("ventas.contracts.create", "Crear contratos")]
-        public IActionResult Insert([FromBody] Ventas.ContractRequest request)
+        public IActionResult Insert([FromBody] SAL.ContractRequest request)
         {
             var p = BuildContractParameters(request);
 
-            var result = _repo.Get<Ventas.SP_SalesContractResult>("sal.SP_InsertContract", p);
+            var result = _repo.Get<SAL.SP_SalesContractResult>("sal.SP_InsertContract", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al crear el contrato." });
@@ -98,15 +98,15 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del contrato a actualizar.</param>
         /// <param name="request">Nuevos datos del contrato.</param>
-        /// <returns>200 con <see cref="Ventas.SP_SalesContractResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="SAL.SP_SalesContractResult"/> o 400 si hay error.</returns>
         [HttpPut("{id:guid}")]
         [RequirePermission("ventas.contracts.update", "Editar contratos")]
-        public IActionResult Update(Guid id, [FromBody] Ventas.ContractRequest request)
+        public IActionResult Update(Guid id, [FromBody] SAL.ContractRequest request)
         {
             var p = BuildContractParameters(request);
             p.Add("@Id", id);
 
-            var result = _repo.Get<Ventas.SP_SalesContractResult>("sal.SP_UpdateContract", p);
+            var result = _repo.Get<SAL.SP_SalesContractResult>("sal.SP_UpdateContract", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al actualizar el contrato." });
@@ -119,16 +119,16 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del contrato.</param>
         /// <param name="request">Nuevo estado.</param>
-        /// <returns>200 con <see cref="Ventas.SP_SalesContractResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="SAL.SP_SalesContractResult"/> o 400 si hay error.</returns>
         [HttpPatch("{id:guid}/status")]
         [RequirePermission("ventas.contracts.change-status", "Cambiar estado de contratos")]
-        public IActionResult ChangeStatus(Guid id, [FromBody] Ventas.ContractStatusRequest request)
+        public IActionResult ChangeStatus(Guid id, [FromBody] SAL.ContractStatusRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@Id",     id);
             p.Add("@Status", request.Status);
 
-            var result = _repo.Get<Ventas.SP_SalesContractResult>("sal.SP_ChangeContractStatus", p);
+            var result = _repo.Get<SAL.SP_SalesContractResult>("sal.SP_ChangeContractStatus", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al cambiar el estado del contrato." });
@@ -140,7 +140,7 @@ namespace server.Controllers
         /// Alterna el estado activo/inactivo de un contrato (eliminación lógica).
         /// </summary>
         /// <param name="id">Identificador único del contrato.</param>
-        /// <returns>200 con <see cref="Ventas.SP_SalesContractResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="SAL.SP_SalesContractResult"/> o 400 si no existe.</returns>
         [HttpPatch("{id:guid}/toggle")]
         [RequirePermission("ventas.contracts.toggle", "Activar/desactivar contratos")]
         public IActionResult Toggle(Guid id)
@@ -148,7 +148,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Ventas.SP_SalesContractResult>("sal.SP_ToggleContractStatus", p);
+            var result = _repo.Get<SAL.SP_SalesContractResult>("sal.SP_ToggleContractStatus", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al cambiar el estado del contrato." });
@@ -160,7 +160,7 @@ namespace server.Controllers
         /// Elimina permanentemente un contrato.
         /// </summary>
         /// <param name="id">Identificador único del contrato.</param>
-        /// <returns>200 con <see cref="Ventas.SP_SalesContractResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="SAL.SP_SalesContractResult"/> o 400 si no existe.</returns>
         [HttpDelete("{id:guid}")]
         [RequirePermission("ventas.contracts.delete", "Eliminar contratos")]
         public async Task<IActionResult> Delete(Guid id)
@@ -170,7 +170,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Ventas.SP_SalesContractResult>("sal.SP_DeleteContract", p);
+            var result = _repo.Get<SAL.SP_SalesContractResult>("sal.SP_DeleteContract", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el contrato." });
@@ -190,7 +190,7 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del contrato.</param>
         /// <param name="file">Archivo PDF, JPG o PNG de máximo 10 MB.</param>
-        /// <returns>200 con <see cref="Ventas.SP_SalesContractResult"/> o 400 si el archivo no es válido.</returns>
+        /// <returns>200 con <see cref="SAL.SP_SalesContractResult"/> o 400 si el archivo no es válido.</returns>
         [HttpPost("{id:guid}/document")]
         [RequirePermission("ventas.contracts.document-upload", "Subir documento de contrato")]
         public async Task<IActionResult> UploadDocument(Guid id, IFormFile file)
@@ -222,7 +222,7 @@ namespace server.Controllers
             p.Add("@DocumentUrl",  blobPath);
             p.Add("@DocumentName", file.FileName);
 
-            var result = _repo.Get<Ventas.SP_SalesContractResult>("sal.SP_SetContractDocument", p);
+            var result = _repo.Get<SAL.SP_SalesContractResult>("sal.SP_SetContractDocument", p);
 
             if (result is null || result.Success == 0)
             {
@@ -261,7 +261,7 @@ namespace server.Controllers
         /// contenedor y desasocia la ruta en la base de datos.
         /// </summary>
         /// <param name="id">Identificador único del contrato.</param>
-        /// <returns>200 con <see cref="Ventas.SP_SalesContractResult"/> o 404 si no tiene documento.</returns>
+        /// <returns>200 con <see cref="SAL.SP_SalesContractResult"/> o 404 si no tiene documento.</returns>
         [HttpDelete("{id:guid}/document")]
         [RequirePermission("ventas.contracts.document-delete", "Eliminar documento de contrato")]
         public async Task<IActionResult> DeleteDocument(Guid id)
@@ -277,7 +277,7 @@ namespace server.Controllers
             p.Add("@DocumentUrl",  (string?)null);
             p.Add("@DocumentName", (string?)null);
 
-            var result = _repo.Get<Ventas.SP_SalesContractResult>("sal.SP_SetContractDocument", p);
+            var result = _repo.Get<SAL.SP_SalesContractResult>("sal.SP_SetContractDocument", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el documento del contrato." });
@@ -286,15 +286,15 @@ namespace server.Controllers
         }
 
         /// <summary>Consulta un contrato por Id (null si no existe).</summary>
-        private Ventas.ContractResponse? GetContract(Guid id)
+        private SAL.ContractResponse? GetContract(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@Id", id);
-            return _repo.Get<Ventas.ContractResponse>("sal.SP_GetContractById", p);
+            return _repo.Get<SAL.ContractResponse>("sal.SP_GetContractById", p);
         }
 
         /// <summary>Parámetros comunes de crear/actualizar contrato.</summary>
-        private static DynamicParameters BuildContractParameters(Ventas.ContractRequest request)
+        private static DynamicParameters BuildContractParameters(SAL.ContractRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@ClientId",   request.ClientId);

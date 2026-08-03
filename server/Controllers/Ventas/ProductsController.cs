@@ -31,7 +31,7 @@ namespace server.Controllers
         /// </summary>
         /// <param name="active">true = solo activos | false = solo inactivos | omitir = todos.</param>
         /// <param name="type">Filtra por tipo (Product | Service).</param>
-        /// <returns>200 con la lista de <see cref="Ventas.ProductResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="SAL.ProductResponse"/>.</returns>
         [HttpGet]
         public IActionResult GetAll([FromQuery] bool? active = null, [FromQuery] string? type = null)
         {
@@ -39,7 +39,7 @@ namespace server.Controllers
             p.Add("@IsActive", active.HasValue ? (object)active.Value : null);
             p.Add("@Type",     type);
 
-            var result = _repo.GetAll<Ventas.ProductResponse>("sal.SP_GetProducts", p);
+            var result = _repo.GetAll<SAL.ProductResponse>("sal.SP_GetProducts", p);
             return Ok(result);
         }
 
@@ -47,14 +47,14 @@ namespace server.Controllers
         /// Retorna un producto/servicio por su identificador único.
         /// </summary>
         /// <param name="id">Identificador único (GUID) del producto.</param>
-        /// <returns>200 con <see cref="Ventas.ProductResponse"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="SAL.ProductResponse"/> o 404 si no existe.</returns>
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Ventas.ProductResponse>("sal.SP_GetProductById", p);
+            var result = _repo.Get<SAL.ProductResponse>("sal.SP_GetProductById", p);
             if (result is null)
                 return NotFound(new { message = "Producto no encontrado." });
 
@@ -65,14 +65,14 @@ namespace server.Controllers
         /// Crea un nuevo producto/servicio.
         /// </summary>
         /// <param name="request">Datos del producto.</param>
-        /// <returns>200 con <see cref="Ventas.SP_ProductResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="SAL.SP_ProductResult"/> o 400 si hay error.</returns>
         [HttpPost]
         [RequirePermission("ventas.products.create", "Crear productos")]
-        public IActionResult Insert([FromBody] Ventas.ProductRequest request)
+        public IActionResult Insert([FromBody] SAL.ProductRequest request)
         {
             var p = BuildProductParameters(request);
 
-            var result = _repo.Get<Ventas.SP_ProductResult>("sal.SP_InsertProduct", p);
+            var result = _repo.Get<SAL.SP_ProductResult>("sal.SP_InsertProduct", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al crear el producto." });
@@ -85,15 +85,15 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del producto a actualizar.</param>
         /// <param name="request">Nuevos datos del producto.</param>
-        /// <returns>200 con <see cref="Ventas.SP_ProductResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="SAL.SP_ProductResult"/> o 400 si hay error.</returns>
         [HttpPut("{id:guid}")]
         [RequirePermission("ventas.products.update", "Editar productos")]
-        public IActionResult Update(Guid id, [FromBody] Ventas.ProductRequest request)
+        public IActionResult Update(Guid id, [FromBody] SAL.ProductRequest request)
         {
             var p = BuildProductParameters(request);
             p.Add("@Id", id);
 
-            var result = _repo.Get<Ventas.SP_ProductResult>("sal.SP_UpdateProduct", p);
+            var result = _repo.Get<SAL.SP_ProductResult>("sal.SP_UpdateProduct", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al actualizar el producto." });
@@ -105,7 +105,7 @@ namespace server.Controllers
         /// Alterna el estado activo/inactivo de un producto/servicio (eliminación lógica).
         /// </summary>
         /// <param name="id">Identificador único del producto.</param>
-        /// <returns>200 con <see cref="Ventas.SP_ProductResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="SAL.SP_ProductResult"/> o 400 si no existe.</returns>
         [HttpPatch("{id:guid}/toggle")]
         [RequirePermission("ventas.products.toggle", "Activar/desactivar productos")]
         public IActionResult Toggle(Guid id)
@@ -113,7 +113,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Ventas.SP_ProductResult>("sal.SP_ToggleProductStatus", p);
+            var result = _repo.Get<SAL.SP_ProductResult>("sal.SP_ToggleProductStatus", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al cambiar el estado del producto." });
@@ -125,7 +125,7 @@ namespace server.Controllers
         /// Elimina permanentemente un producto/servicio (bloqueado si ya fue usado en cotizaciones u órdenes).
         /// </summary>
         /// <param name="id">Identificador único del producto.</param>
-        /// <returns>200 con <see cref="Ventas.SP_ProductResult"/> o 400 si no existe o está en uso.</returns>
+        /// <returns>200 con <see cref="SAL.SP_ProductResult"/> o 400 si no existe o está en uso.</returns>
         [HttpDelete("{id:guid}")]
         [RequirePermission("ventas.products.delete", "Eliminar productos")]
         public IActionResult Delete(Guid id)
@@ -133,7 +133,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Ventas.SP_ProductResult>("sal.SP_DeleteProduct", p);
+            var result = _repo.Get<SAL.SP_ProductResult>("sal.SP_DeleteProduct", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el producto." });
@@ -142,7 +142,7 @@ namespace server.Controllers
         }
 
         /// <summary>Parámetros comunes de crear/actualizar producto.</summary>
-        private static DynamicParameters BuildProductParameters(Ventas.ProductRequest request)
+        private static DynamicParameters BuildProductParameters(SAL.ProductRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@Code",        request.Code.Trim());

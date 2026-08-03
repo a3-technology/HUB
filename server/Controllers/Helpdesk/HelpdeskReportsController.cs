@@ -40,7 +40,7 @@ namespace server.Controllers
             p.Add("@DateTo",   to);
             p.Add("@GroupBy",  groupBy);
 
-            var result = _repo.GetAll<Helpdesk.VolumeByGroupResponse>("hd.SP_GetTicketVolumeReport", p);
+            var result = _repo.GetAll<HD.VolumeByGroupResponse>("hd.SP_GetTicketVolumeReport", p);
             return Ok(result);
         }
 
@@ -53,7 +53,7 @@ namespace server.Controllers
             p.Add("@DateFrom", from);
             p.Add("@DateTo",   to);
 
-            var result = _repo.GetAll<Helpdesk.AgentLoadResponse>("hd.SP_GetAgentLoadReport", p);
+            var result = _repo.GetAll<HD.AgentLoadResponse>("hd.SP_GetAgentLoadReport", p);
             return Ok(result);
         }
 
@@ -66,7 +66,7 @@ namespace server.Controllers
             p.Add("@DateFrom", from);
             p.Add("@DateTo",   to);
 
-            var result = _repo.Get<Helpdesk.ResponseTimesResponse>("hd.SP_GetResponseTimeReport", p);
+            var result = _repo.Get<HD.ResponseTimesResponse>("hd.SP_GetResponseTimeReport", p);
             return Ok(result);
         }
 
@@ -79,7 +79,7 @@ namespace server.Controllers
             p.Add("@DateFrom", from);
             p.Add("@DateTo",   to);
 
-            var result = _repo.GetAll<Helpdesk.SlaCompliancePriorityResponse>("hd.SP_GetSlaComplianceReport", p);
+            var result = _repo.GetAll<HD.SlaCompliancePriorityResponse>("hd.SP_GetSlaComplianceReport", p);
             return Ok(result);
         }
     }

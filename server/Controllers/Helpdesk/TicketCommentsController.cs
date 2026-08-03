@@ -47,7 +47,7 @@ namespace server.Controllers
         /// Retorna los comentarios de un ticket, del más antiguo al más reciente.
         /// </summary>
         /// <param name="ticketId">Identificador del ticket.</param>
-        /// <returns>200 con la lista de <see cref="Helpdesk.TicketCommentResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="HD.TicketCommentResponse"/>.</returns>
         [HttpGet]
         public IActionResult GetByTicket([FromQuery] Guid? ticketId)
         {
@@ -57,7 +57,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@TicketId", ticketId);
 
-            var result = _repo.GetAll<Helpdesk.TicketCommentResponse>("hd.SP_GetTicketComments", p);
+            var result = _repo.GetAll<HD.TicketCommentResponse>("hd.SP_GetTicketComments", p);
             return Ok(result);
         }
 
@@ -66,14 +66,14 @@ namespace server.Controllers
         /// </summary>
         /// <param name="ticketId">Identificador del ticket comentado.</param>
         /// <param name="request">Texto del comentario.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketCommentResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketCommentResult"/> o 400 si hay error.</returns>
         [HttpPost("{ticketId:guid}")]
         [RequirePermission("helpdesk.tickets.comment-create", "Comentar tickets")]
-        public IActionResult Insert(Guid ticketId, [FromBody] Helpdesk.TicketCommentRequest request)
+        public IActionResult Insert(Guid ticketId, [FromBody] HD.TicketCommentRequest request)
         {
             var ticketP = new DynamicParameters();
             ticketP.Add("@Id", ticketId);
-            var ticket = _repo.Get<Helpdesk.TicketResponse>("hd.SP_GetTicketById", ticketP);
+            var ticket = _repo.Get<HD.TicketResponse>("hd.SP_GetTicketById", ticketP);
             if (ticket is null)
                 return NotFound(new { message = "Ticket no encontrado." });
 
@@ -85,7 +85,7 @@ namespace server.Controllers
             p.Add("@UserId",   CurrentUserId);
             p.Add("@Text",     request.Text.Trim());
 
-            var result = _repo.Get<Helpdesk.SP_TicketCommentResult>("hd.SP_InsertTicketComment", p);
+            var result = _repo.Get<HD.SP_TicketCommentResult>("hd.SP_InsertTicketComment", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al agregar el comentario." });

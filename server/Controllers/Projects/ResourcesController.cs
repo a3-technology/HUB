@@ -32,7 +32,7 @@ namespace server.Controllers
         /// </summary>
         /// <param name="projectId">Filtra las asignaciones de un proyecto específico.</param>
         /// <param name="active">true = solo activas | false = solo inactivas | omitir = todas.</param>
-        /// <returns>200 con la lista de <see cref="Projects.ResourceResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="PM.ResourceResponse"/>.</returns>
         [HttpGet]
         public IActionResult GetAll([FromQuery] Guid? projectId = null, [FromQuery] bool? active = null)
         {
@@ -40,7 +40,7 @@ namespace server.Controllers
             p.Add("@ProjectId", projectId);
             p.Add("@IsActive",  active.HasValue ? (object)active.Value : null);
 
-            var result = _repo.GetAll<Projects.ResourceResponse>("pm.SP_GetResources", p);
+            var result = _repo.GetAll<PM.ResourceResponse>("pm.SP_GetResources", p);
             return Ok(result);
         }
 
@@ -48,14 +48,14 @@ namespace server.Controllers
         /// Retorna una asignación de recurso por su identificador único.
         /// </summary>
         /// <param name="id">Identificador único (GUID) de la asignación.</param>
-        /// <returns>200 con <see cref="Projects.ResourceResponse"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.ResourceResponse"/> o 404 si no existe.</returns>
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.ResourceResponse>("pm.SP_GetResourceById", p);
+            var result = _repo.Get<PM.ResourceResponse>("pm.SP_GetResourceById", p);
             if (result is null)
                 return NotFound(new { message = "Asignación no encontrada." });
 
@@ -66,16 +66,16 @@ namespace server.Controllers
         /// Asigna un empleado como recurso de un proyecto.
         /// </summary>
         /// <param name="request">Datos de la asignación.</param>
-        /// <returns>200 con <see cref="Projects.SP_ResourceResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="PM.SP_ResourceResult"/> o 400 si hay error.</returns>
         [HttpPost]
         [RequirePermission("projects.resources.create", "Asignar recursos a proyectos")]
-        public IActionResult Insert([FromBody] Projects.ResourceRequest request)
+        public IActionResult Insert([FromBody] PM.ResourceRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@ProjectId",  request.ProjectId);
             p.Add("@EmployeeId", request.EmployeeId);
 
-            var result = _repo.Get<Projects.SP_ResourceResult>("pm.SP_InsertResource", p);
+            var result = _repo.Get<PM.SP_ResourceResult>("pm.SP_InsertResource", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al asignar el recurso." });
@@ -88,17 +88,17 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único de la asignación a actualizar.</param>
         /// <param name="request">Nuevos datos de la asignación.</param>
-        /// <returns>200 con <see cref="Projects.SP_ResourceResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="PM.SP_ResourceResult"/> o 400 si hay error.</returns>
         [HttpPut("{id:guid}")]
         [RequirePermission("projects.resources.update", "Editar asignaciones de recursos")]
-        public IActionResult Update(Guid id, [FromBody] Projects.ResourceRequest request)
+        public IActionResult Update(Guid id, [FromBody] PM.ResourceRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@Id",         id);
             p.Add("@ProjectId",  request.ProjectId);
             p.Add("@EmployeeId", request.EmployeeId);
 
-            var result = _repo.Get<Projects.SP_ResourceResult>("pm.SP_UpdateResource", p);
+            var result = _repo.Get<PM.SP_ResourceResult>("pm.SP_UpdateResource", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al actualizar la asignación." });
@@ -110,7 +110,7 @@ namespace server.Controllers
         /// Alterna el estado activo/inactivo de una asignación de recurso (eliminación lógica).
         /// </summary>
         /// <param name="id">Identificador único de la asignación.</param>
-        /// <returns>200 con <see cref="Projects.SP_ResourceResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.SP_ResourceResult"/> o 400 si no existe.</returns>
         [HttpPatch("{id:guid}/toggle")]
         [RequirePermission("projects.resources.toggle", "Activar/desactivar asignaciones de recursos")]
         public IActionResult Toggle(Guid id)
@@ -118,7 +118,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.SP_ResourceResult>("pm.SP_ToggleResourceStatus", p);
+            var result = _repo.Get<PM.SP_ResourceResult>("pm.SP_ToggleResourceStatus", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al cambiar el estado de la asignación." });
@@ -130,7 +130,7 @@ namespace server.Controllers
         /// Elimina permanentemente una asignación de recurso.
         /// </summary>
         /// <param name="id">Identificador único de la asignación.</param>
-        /// <returns>200 con <see cref="Projects.SP_ResourceResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.SP_ResourceResult"/> o 400 si no existe.</returns>
         [HttpDelete("{id:guid}")]
         [RequirePermission("projects.resources.delete", "Eliminar asignaciones de recursos")]
         public IActionResult Delete(Guid id)
@@ -138,7 +138,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.SP_ResourceResult>("pm.SP_DeleteResource", p);
+            var result = _repo.Get<PM.SP_ResourceResult>("pm.SP_DeleteResource", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar la asignación." });

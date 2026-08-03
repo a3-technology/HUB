@@ -31,7 +31,7 @@ namespace server.Controllers
         /// </summary>
         /// <param name="active">true = solo activos | false = solo inactivos | omitir = todos.</param>
         /// <param name="status">Filtra por estado de flujo (Planned, InProgress, OnHold, Completed, Cancelled).</param>
-        /// <returns>200 con la lista de <see cref="Projects.ProjectResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="PM.ProjectResponse"/>.</returns>
         [HttpGet]
         public IActionResult GetAll([FromQuery] bool? active = null, [FromQuery] string? status = null)
         {
@@ -39,7 +39,7 @@ namespace server.Controllers
             p.Add("@IsActive", active.HasValue ? (object)active.Value : null);
             p.Add("@Status", status);
 
-            var result = _repo.GetAll<Projects.ProjectResponse>("pm.SP_GetProjects", p);
+            var result = _repo.GetAll<PM.ProjectResponse>("pm.SP_GetProjects", p);
             return Ok(result);
         }
 
@@ -47,14 +47,14 @@ namespace server.Controllers
         /// Retorna un proyecto por su identificador único.
         /// </summary>
         /// <param name="id">Identificador único (GUID) del proyecto.</param>
-        /// <returns>200 con <see cref="Projects.ProjectResponse"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.ProjectResponse"/> o 404 si no existe.</returns>
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.ProjectResponse>("pm.SP_GetProjectById", p);
+            var result = _repo.Get<PM.ProjectResponse>("pm.SP_GetProjectById", p);
             if (result is null)
                 return NotFound(new { message = "Proyecto no encontrado." });
 
@@ -65,10 +65,10 @@ namespace server.Controllers
         /// Crea un nuevo proyecto validando unicidad del código.
         /// </summary>
         /// <param name="request">Datos del proyecto.</param>
-        /// <returns>200 con <see cref="Projects.SP_ProjectResult"/> o 400 si hay conflicto de unicidad.</returns>
+        /// <returns>200 con <see cref="PM.SP_ProjectResult"/> o 400 si hay conflicto de unicidad.</returns>
         [HttpPost]
         [RequirePermission("projects.projects.create", "Crear proyectos")]
-        public IActionResult Insert([FromBody] Projects.ProjectRequest request)
+        public IActionResult Insert([FromBody] PM.ProjectRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@Code",        request.Code.Trim());
@@ -80,7 +80,7 @@ namespace server.Controllers
             p.Add("@Status",      request.Status);
             p.Add("@Budget",      request.Budget);
 
-            var result = _repo.Get<Projects.SP_ProjectResult>("pm.SP_InsertProject", p);
+            var result = _repo.Get<PM.SP_ProjectResult>("pm.SP_InsertProject", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al crear el proyecto." });
@@ -94,10 +94,10 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del proyecto a actualizar.</param>
         /// <param name="request">Nuevos datos del proyecto.</param>
-        /// <returns>200 con <see cref="Projects.SP_ProjectResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="PM.SP_ProjectResult"/> o 400 si hay error.</returns>
         [HttpPut("{id:guid}")]
         [RequirePermission("projects.projects.update", "Editar proyectos")]
-        public IActionResult Update(Guid id, [FromBody] Projects.ProjectRequest request)
+        public IActionResult Update(Guid id, [FromBody] PM.ProjectRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@Id",          id);
@@ -110,7 +110,7 @@ namespace server.Controllers
             p.Add("@Status",      request.Status);
             p.Add("@Budget",      request.Budget);
 
-            var result = _repo.Get<Projects.SP_ProjectResult>("pm.SP_UpdateProject", p);
+            var result = _repo.Get<PM.SP_ProjectResult>("pm.SP_UpdateProject", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al actualizar el proyecto." });
@@ -123,7 +123,7 @@ namespace server.Controllers
         /// Si estaba activo lo desactiva; si estaba inactivo lo reactiva.
         /// </summary>
         /// <param name="id">Identificador único del proyecto.</param>
-        /// <returns>200 con <see cref="Projects.SP_ProjectResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.SP_ProjectResult"/> o 400 si no existe.</returns>
         [HttpPatch("{id:guid}/toggle")]
         [RequirePermission("projects.projects.toggle", "Activar/desactivar proyectos")]
         public IActionResult Toggle(Guid id)
@@ -131,7 +131,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.SP_ProjectResult>("pm.SP_ToggleProjectStatus", p);
+            var result = _repo.Get<PM.SP_ProjectResult>("pm.SP_ToggleProjectStatus", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al cambiar el estado del proyecto." });
@@ -143,7 +143,7 @@ namespace server.Controllers
         /// Elimina permanentemente un proyecto (y en cascada sus tareas y recursos).
         /// </summary>
         /// <param name="id">Identificador único del proyecto.</param>
-        /// <returns>200 con <see cref="Projects.SP_ProjectResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.SP_ProjectResult"/> o 400 si no existe.</returns>
         [HttpDelete("{id:guid}")]
         [RequirePermission("projects.projects.delete", "Eliminar proyectos")]
         public IActionResult Delete(Guid id)
@@ -151,7 +151,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.SP_ProjectResult>("pm.SP_DeleteProject", p);
+            var result = _repo.Get<PM.SP_ProjectResult>("pm.SP_DeleteProject", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el proyecto." });

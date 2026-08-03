@@ -60,7 +60,7 @@ namespace server.Services
             var repo = scope.ServiceProvider.GetRequiredService<IGenericRepository>();
             var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
 
-            var rows = repo.GetAll<Helpdesk.SlaEscalationResult>("hd.SP_ProcessSlaEscalations", new DynamicParameters());
+            var rows = repo.GetAll<HD.SlaEscalationResult>("hd.SP_ProcessSlaEscalations", new DynamicParameters());
 
             foreach (var row in rows)
             {
@@ -75,7 +75,7 @@ namespace server.Services
             }
         }
 
-        private static void NotifyRow(INotificationService notifications, Helpdesk.SlaEscalationResult row)
+        private static void NotifyRow(INotificationService notifications, HD.SlaEscalationResult row)
         {
             var label = $"{row.Code} · {row.Subject}";
 

@@ -36,7 +36,7 @@ namespace server.Controllers
         /// Retorna los comentarios de una tarea, del más antiguo al más reciente.
         /// </summary>
         /// <param name="taskId">Identificador de la tarea.</param>
-        /// <returns>200 con la lista de <see cref="Projects.CommentResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="PM.CommentResponse"/>.</returns>
         [HttpGet]
         public IActionResult GetByTask([FromQuery] Guid? taskId)
         {
@@ -46,7 +46,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@TaskId", taskId);
 
-            var result = _repo.GetAll<Projects.CommentResponse>("pm.SP_GetTaskComments", p);
+            var result = _repo.GetAll<PM.CommentResponse>("pm.SP_GetTaskComments", p);
             return Ok(result);
         }
 
@@ -55,17 +55,17 @@ namespace server.Controllers
         /// </summary>
         /// <param name="taskId">Identificador de la tarea comentada.</param>
         /// <param name="request">Texto del comentario.</param>
-        /// <returns>200 con <see cref="Projects.SP_CommentResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="PM.SP_CommentResult"/> o 400 si hay error.</returns>
         [HttpPost("{taskId:guid}")]
         [RequirePermission("projects.tasks.comment-create", "Comentar tareas")]
-        public IActionResult Insert(Guid taskId, [FromBody] Projects.CommentRequest request)
+        public IActionResult Insert(Guid taskId, [FromBody] PM.CommentRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@TaskId", taskId);
             p.Add("@UserId", CurrentUserId);
             p.Add("@Text",   request.Text.Trim());
 
-            var result = _repo.Get<Projects.SP_CommentResult>("pm.SP_InsertTaskComment", p);
+            var result = _repo.Get<PM.SP_CommentResult>("pm.SP_InsertTaskComment", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al agregar el comentario." });
@@ -77,7 +77,7 @@ namespace server.Controllers
         /// Elimina un comentario, solo si pertenece al usuario autenticado.
         /// </summary>
         /// <param name="id">Identificador único del comentario.</param>
-        /// <returns>200 con <see cref="Projects.SP_CommentResult"/> o 400 si no existe o no es el autor.</returns>
+        /// <returns>200 con <see cref="PM.SP_CommentResult"/> o 400 si no existe o no es el autor.</returns>
         [HttpDelete("{id:guid}")]
         [RequirePermission("projects.tasks.comment-delete", "Eliminar comentarios de tareas")]
         public IActionResult Delete(Guid id)
@@ -86,7 +86,7 @@ namespace server.Controllers
             p.Add("@Id",     id);
             p.Add("@UserId", CurrentUserId);
 
-            var result = _repo.Get<Projects.SP_CommentResult>("pm.SP_DeleteTaskComment", p);
+            var result = _repo.Get<PM.SP_CommentResult>("pm.SP_DeleteTaskComment", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el comentario." });

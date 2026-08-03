@@ -38,7 +38,7 @@ namespace server.Controllers
         }
 
         /// <summary>Notifica al solicitante del ticket, si su cuenta no es la del agente que hace el cambio.</summary>
-        private void NotifyRequester(Helpdesk.TicketResponse ticket, string type, string title, string message)
+        private void NotifyRequester(HD.TicketResponse ticket, string type, string title, string message)
         {
             var requesterUserId = _notifications.GetUserIdByEmployeeId(ticket.RequesterId);
             if (requesterUserId is not null && requesterUserId != CurrentUserId)
@@ -84,7 +84,7 @@ namespace server.Controllers
         /// <param name="priorityId">Filtra por prioridad.</param>
         /// <param name="statusId">Filtra por estado.</param>
         /// <param name="active">true = solo activos | false = solo inactivos | omitir = todos.</param>
-        /// <returns>200 con la lista de <see cref="Helpdesk.TicketResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="HD.TicketResponse"/>.</returns>
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] Guid? requesterId = null, [FromQuery] Guid? assignedToId = null,
@@ -103,7 +103,7 @@ namespace server.Controllers
             p.Add("@ViewerEmployeeId", hasManageAll ? null : CurrentEmployeeId());
             p.Add("@RestrictToOwn",    !hasManageAll);
 
-            var result = _repo.GetAll<Helpdesk.TicketResponse>("hd.SP_GetTickets", p).ToList();
+            var result = _repo.GetAll<HD.TicketResponse>("hd.SP_GetTickets", p).ToList();
 
             foreach (var t in result)
             {
@@ -118,7 +118,7 @@ namespace server.Controllers
         /// Retorna un ticket por su identificador único.
         /// </summary>
         /// <param name="id">Identificador único (GUID) del ticket.</param>
-        /// <returns>200 con <see cref="Helpdesk.TicketResponse"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="HD.TicketResponse"/> o 404 si no existe.</returns>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -135,10 +135,10 @@ namespace server.Controllers
         /// Crea un nuevo ticket en estado Abierto.
         /// </summary>
         /// <param name="request">Datos del ticket.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/> o 400 si hay error.</returns>
         [HttpPost]
         [RequirePermission("helpdesk.tickets.create", "Crear tickets")]
-        public IActionResult Insert([FromBody] Helpdesk.TicketRequest request)
+        public IActionResult Insert([FromBody] HD.TicketRequest request)
         {
             // Asignar directamente a otro agente al crear el ticket es una acción de
             // supervisor (helpdesk.tickets.manage-all); cualquier otro agente solo
@@ -154,7 +154,7 @@ namespace server.Controllers
             p.Add("@PriorityId",   request.PriorityId);
             p.Add("@AssignedToId", request.AssignedToId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_InsertTicket", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_InsertTicket", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al crear el ticket." });
@@ -184,10 +184,10 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del ticket a actualizar.</param>
         /// <param name="request">Nuevos datos del ticket.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/> o 400 si hay error.</returns>
         [HttpPut("{id:guid}")]
         [RequirePermission("helpdesk.tickets.update", "Editar tickets")]
-        public IActionResult Update(Guid id, [FromBody] Helpdesk.TicketUpdateRequest request)
+        public IActionResult Update(Guid id, [FromBody] HD.TicketUpdateRequest request)
         {
             var before = GetTicket(id);
             if (before is null)
@@ -219,7 +219,7 @@ namespace server.Controllers
             p.Add("@CategoryId",  request.CategoryId);
             p.Add("@PriorityId",  request.PriorityId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_UpdateTicket", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_UpdateTicket", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al actualizar el ticket." });
@@ -235,10 +235,10 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del ticket.</param>
         /// <param name="request">Nuevo responsable (obligatorio).</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/> o 400/404 si hay error.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/> o 400/404 si hay error.</returns>
         [HttpPatch("{id:guid}/assign")]
         [RequirePermission("helpdesk.tickets.manage-all", "Ver y gestionar todos los tickets (supervisor)")]
-        public IActionResult Assign(Guid id, [FromBody] Helpdesk.TicketAssignRequest request)
+        public IActionResult Assign(Guid id, [FromBody] HD.TicketAssignRequest request)
         {
             if (request.AssignedToId is null)
                 return BadRequest(new { message = "Debes elegir un responsable; un ticket no puede quedar sin asignar desde acá." });
@@ -254,7 +254,7 @@ namespace server.Controllers
             p.Add("@Id",           id);
             p.Add("@AssignedToId", request.AssignedToId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_AssignTicket", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_AssignTicket", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al asignar el ticket." });
@@ -293,7 +293,7 @@ namespace server.Controllers
         /// supervisor con <see cref="Assign"/>, nunca queda sin nadie.
         /// </summary>
         /// <param name="id">Identificador único del ticket.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/> o 400/404 si hay error.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/> o 400/404 si hay error.</returns>
         [HttpPatch("{id:guid}/claim")]
         [RequirePermission("helpdesk.tickets.update", "Editar tickets")]
         public IActionResult Claim(Guid id)
@@ -313,7 +313,7 @@ namespace server.Controllers
             p.Add("@Id",         id);
             p.Add("@EmployeeId", employeeId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_ClaimTicket", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_ClaimTicket", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al tomar el ticket." });
@@ -330,11 +330,11 @@ namespace server.Controllers
         /// Retorna los empleados que pueden ser responsables de un ticket (cualquier
         /// usuario activo con el módulo Helpdesk), para el combo de asignación.
         /// </summary>
-        /// <returns>200 con la lista de <see cref="Helpdesk.AgentResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="HD.AgentResponse"/>.</returns>
         [HttpGet("agents")]
         public IActionResult GetAgents()
         {
-            return Ok(_repo.GetAll<Helpdesk.AgentResponse>("hd.SP_GetHelpdeskAgents", new DynamicParameters()));
+            return Ok(_repo.GetAll<HD.AgentResponse>("hd.SP_GetHelpdeskAgents", new DynamicParameters()));
         }
 
         /// <summary>
@@ -342,10 +342,10 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del ticket.</param>
         /// <param name="request">Nuevo estado.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/> o 400 si hay error.</returns>
         [HttpPatch("{id:guid}/status")]
         [RequirePermission("helpdesk.tickets.change-status", "Cambiar estado de tickets")]
-        public IActionResult ChangeStatus(Guid id, [FromBody] Helpdesk.TicketStatusChangeRequest request)
+        public IActionResult ChangeStatus(Guid id, [FromBody] HD.TicketStatusChangeRequest request)
         {
             var before = GetTicket(id);
             if (before is null)
@@ -363,7 +363,7 @@ namespace server.Controllers
             p.Add("@StatusId",   request.StatusId);
             p.Add("@Resolution", request.Resolution?.Trim());
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_ChangeTicketStatus", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_ChangeTicketStatus", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al cambiar el estado del ticket." });
@@ -392,7 +392,7 @@ namespace server.Controllers
         /// Elimina permanentemente un ticket (sus comentarios y adjuntos se eliminan en cascada).
         /// </summary>
         /// <param name="id">Identificador único del ticket.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/> o 400 si no existe.</returns>
         [HttpDelete("{id:guid}")]
         [RequirePermission("helpdesk.tickets.delete", "Eliminar tickets")]
         public IActionResult Delete(Guid id)
@@ -404,7 +404,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_DeleteTicket", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_DeleteTicket", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el ticket." });
@@ -418,14 +418,14 @@ namespace server.Controllers
 
         /// <summary>Retorna los adjuntos de un ticket, del más reciente al más antiguo.</summary>
         /// <param name="id">Identificador único del ticket.</param>
-        /// <returns>200 con la lista de <see cref="Helpdesk.TicketAttachmentResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="HD.TicketAttachmentResponse"/>.</returns>
         [HttpGet("{id:guid}/attachments")]
         public IActionResult GetAttachments(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@TicketId", id);
 
-            var result = _repo.GetAll<Helpdesk.TicketAttachmentResponse>("hd.SP_GetTicketAttachments", p);
+            var result = _repo.GetAll<HD.TicketAttachmentResponse>("hd.SP_GetTicketAttachments", p);
             return Ok(result);
         }
 
@@ -435,7 +435,7 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del ticket.</param>
         /// <param name="file">Archivo de máximo 10 MB (PDF, Office, imágenes o ZIP).</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketAttachmentResult"/> o 400 si el archivo no es válido.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketAttachmentResult"/> o 400 si el archivo no es válido.</returns>
         [HttpPost("{id:guid}/attachments")]
         [RequirePermission("helpdesk.tickets.attachment-upload", "Subir adjuntos de tickets")]
         public async Task<IActionResult> UploadAttachment(Guid id, IFormFile file)
@@ -476,7 +476,7 @@ namespace server.Controllers
             p.Add("@FileSize",         file.Length);
             p.Add("@UploadedByUserId", CurrentUserId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketAttachmentResult>("hd.SP_InsertTicketAttachment", p);
+            var result = _repo.Get<HD.SP_TicketAttachmentResult>("hd.SP_InsertTicketAttachment", p);
 
             if (result is null || result.Success == 0)
             {
@@ -511,7 +511,7 @@ namespace server.Controllers
         /// Elimina un adjunto de ticket: borra el archivo del contenedor y el registro en la base de datos.
         /// </summary>
         /// <param name="attachmentId">Identificador único del adjunto.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketAttachmentResult"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketAttachmentResult"/> o 404 si no existe.</returns>
         [HttpDelete("attachments/{attachmentId:guid}")]
         [RequirePermission("helpdesk.tickets.attachment-delete", "Eliminar adjuntos de tickets")]
         public async Task<IActionResult> DeleteAttachment(Guid attachmentId)
@@ -537,7 +537,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", attachmentId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketAttachmentResult>("hd.SP_DeleteTicketAttachment", p);
+            var result = _repo.Get<HD.SP_TicketAttachmentResult>("hd.SP_DeleteTicketAttachment", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el adjunto." });
@@ -546,19 +546,19 @@ namespace server.Controllers
         }
 
         /// <summary>Consulta un ticket por Id (null si no existe).</summary>
-        private Helpdesk.TicketResponse? GetTicket(Guid id)
+        private HD.TicketResponse? GetTicket(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@Id", id);
-            return _repo.Get<Helpdesk.TicketResponse>("hd.SP_GetTicketById", p);
+            return _repo.Get<HD.TicketResponse>("hd.SP_GetTicketById", p);
         }
 
         /// <summary>Consulta un adjunto de ticket por Id (null si no existe).</summary>
-        private Helpdesk.TicketAttachmentResponse? GetAttachment(Guid attachmentId)
+        private HD.TicketAttachmentResponse? GetAttachment(Guid attachmentId)
         {
             var p = new DynamicParameters();
             p.Add("@Id", attachmentId);
-            return _repo.Get<Helpdesk.TicketAttachmentResponse>("hd.SP_GetTicketAttachmentById", p);
+            return _repo.Get<HD.TicketAttachmentResponse>("hd.SP_GetTicketAttachmentById", p);
         }
 
         /// <summary>

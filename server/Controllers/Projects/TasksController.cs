@@ -46,7 +46,7 @@ namespace server.Controllers
         /// <param name="active">true = solo activas | false = solo inactivas | omitir = todas.</param>
         /// <param name="status">Filtra por estado de flujo (Pending, InProgress, Blocked, Completed).</param>
         /// <param name="mine">true = solo las tareas asignadas al usuario autenticado.</param>
-        /// <returns>200 con la lista de <see cref="Projects.TaskResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="PM.TaskResponse"/>.</returns>
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] Guid? projectId = null, [FromQuery] bool? active = null, [FromQuery] string? status = null, [FromQuery] bool mine = false)
         {
@@ -56,7 +56,7 @@ namespace server.Controllers
             p.Add("@Status",    status);
             p.Add("@ForUserId", mine ? CurrentUserId : (object?)null);
 
-            var result = _repo.GetAll<Projects.TaskResponse>("pm.SP_GetTasks", p).ToList();
+            var result = _repo.GetAll<PM.TaskResponse>("pm.SP_GetTasks", p).ToList();
 
             foreach (var t in result)
                 t.AssignedToPhotoUrl = await SignPhotoUrl(t.AssignedToPhotoUrl);
@@ -68,14 +68,14 @@ namespace server.Controllers
         /// Retorna las tareas con fechas definidas para pintar el Gantt del Cronograma.
         /// </summary>
         /// <param name="projectId">Filtra el cronograma de un proyecto específico (opcional).</param>
-        /// <returns>200 con la lista de <see cref="Projects.ScheduleItemResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="PM.ScheduleItemResponse"/>.</returns>
         [HttpGet("schedule")]
         public IActionResult GetSchedule([FromQuery] Guid? projectId = null)
         {
             var p = new DynamicParameters();
             p.Add("@ProjectId", projectId);
 
-            var result = _repo.GetAll<Projects.ScheduleItemResponse>("pm.SP_GetProjectSchedule", p);
+            var result = _repo.GetAll<PM.ScheduleItemResponse>("pm.SP_GetProjectSchedule", p);
             return Ok(result);
         }
 
@@ -83,14 +83,14 @@ namespace server.Controllers
         /// Retorna una tarea por su identificador único.
         /// </summary>
         /// <param name="id">Identificador único (GUID) de la tarea.</param>
-        /// <returns>200 con <see cref="Projects.TaskResponse"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.TaskResponse"/> o 404 si no existe.</returns>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.TaskResponse>("pm.SP_GetTaskById", p);
+            var result = _repo.Get<PM.TaskResponse>("pm.SP_GetTaskById", p);
             if (result is null)
                 return NotFound(new { message = "Tarea no encontrada." });
 
@@ -102,10 +102,10 @@ namespace server.Controllers
         /// Crea una nueva tarea asociada a un proyecto.
         /// </summary>
         /// <param name="request">Datos de la tarea.</param>
-        /// <returns>200 con <see cref="Projects.SP_TaskResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="PM.SP_TaskResult"/> o 400 si hay error.</returns>
         [HttpPost]
         [RequirePermission("projects.tasks.create", "Crear tareas")]
-        public IActionResult Insert([FromBody] Projects.TaskRequest request)
+        public IActionResult Insert([FromBody] PM.TaskRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@ProjectId",       request.ProjectId);
@@ -118,7 +118,7 @@ namespace server.Controllers
             p.Add("@Priority",        request.Priority);
             p.Add("@ProgressPercent", request.ProgressPercent);
 
-            var result = _repo.Get<Projects.SP_TaskResult>("pm.SP_InsertTask", p);
+            var result = _repo.Get<PM.SP_TaskResult>("pm.SP_InsertTask", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al crear la tarea." });
@@ -131,10 +131,10 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único de la tarea a actualizar.</param>
         /// <param name="request">Nuevos datos de la tarea.</param>
-        /// <returns>200 con <see cref="Projects.SP_TaskResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="PM.SP_TaskResult"/> o 400 si hay error.</returns>
         [HttpPut("{id:guid}")]
         [RequirePermission("projects.tasks.update", "Editar tareas")]
-        public IActionResult Update(Guid id, [FromBody] Projects.TaskRequest request)
+        public IActionResult Update(Guid id, [FromBody] PM.TaskRequest request)
         {
             var p = new DynamicParameters();
             p.Add("@Id",              id);
@@ -148,7 +148,7 @@ namespace server.Controllers
             p.Add("@Priority",        request.Priority);
             p.Add("@ProgressPercent", request.ProgressPercent);
 
-            var result = _repo.Get<Projects.SP_TaskResult>("pm.SP_UpdateTask", p);
+            var result = _repo.Get<PM.SP_TaskResult>("pm.SP_UpdateTask", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al actualizar la tarea." });
@@ -160,7 +160,7 @@ namespace server.Controllers
         /// Alterna el estado activo/inactivo de una tarea (eliminación lógica).
         /// </summary>
         /// <param name="id">Identificador único de la tarea.</param>
-        /// <returns>200 con <see cref="Projects.SP_TaskResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.SP_TaskResult"/> o 400 si no existe.</returns>
         [HttpPatch("{id:guid}/toggle")]
         [RequirePermission("projects.tasks.toggle", "Activar/desactivar tareas")]
         public IActionResult Toggle(Guid id)
@@ -168,7 +168,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.SP_TaskResult>("pm.SP_ToggleTaskStatus", p);
+            var result = _repo.Get<PM.SP_TaskResult>("pm.SP_ToggleTaskStatus", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al cambiar el estado de la tarea." });
@@ -180,20 +180,20 @@ namespace server.Controllers
         /// Elimina permanentemente una tarea.
         /// </summary>
         /// <param name="id">Identificador único de la tarea.</param>
-        /// <returns>200 con <see cref="Projects.SP_TaskResult"/> o 400 si no existe.</returns>
-        /// <returns>200 con <see cref="Projects.SP_TaskResult"/> o 400 si hay error.</returns>
+        /// <returns>200 con <see cref="PM.SP_TaskResult"/> o 400 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.SP_TaskResult"/> o 400 si hay error.</returns>
         [HttpDelete("{id:guid}")]
         [RequirePermission("projects.tasks.delete", "Eliminar tareas")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var attachmentsParams = new DynamicParameters();
             attachmentsParams.Add("@TaskId", id);
-            var attachments = _repo.GetAll<Projects.AttachmentResponse>("pm.SP_GetTaskAttachments", attachmentsParams);
+            var attachments = _repo.GetAll<PM.AttachmentResponse>("pm.SP_GetTaskAttachments", attachmentsParams);
 
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Projects.SP_TaskResult>("pm.SP_DeleteTask", p);
+            var result = _repo.Get<PM.SP_TaskResult>("pm.SP_DeleteTask", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar la tarea." });
@@ -211,14 +211,14 @@ namespace server.Controllers
         /// Retorna los adjuntos de una tarea, del más reciente al más antiguo.
         /// </summary>
         /// <param name="id">Identificador único de la tarea.</param>
-        /// <returns>200 con la lista de <see cref="Projects.AttachmentResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="PM.AttachmentResponse"/>.</returns>
         [HttpGet("{id:guid}/attachments")]
         public IActionResult GetAttachments(Guid id)
         {
             var p = new DynamicParameters();
             p.Add("@TaskId", id);
 
-            var result = _repo.GetAll<Projects.AttachmentResponse>("pm.SP_GetTaskAttachments", p);
+            var result = _repo.GetAll<PM.AttachmentResponse>("pm.SP_GetTaskAttachments", p);
             return Ok(result);
         }
 
@@ -228,7 +228,7 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único de la tarea.</param>
         /// <param name="file">Archivo de máximo 10 MB (PDF, Office, imágenes o ZIP).</param>
-        /// <returns>200 con <see cref="Projects.SP_AttachmentResult"/> o 400 si el archivo no es válido.</returns>
+        /// <returns>200 con <see cref="PM.SP_AttachmentResult"/> o 400 si el archivo no es válido.</returns>
         [HttpPost("{id:guid}/attachments")]
         [RequirePermission("projects.tasks.attachment-upload", "Adjuntar archivos a tareas")]
         public async Task<IActionResult> UploadAttachment(Guid id, IFormFile file)
@@ -243,7 +243,7 @@ namespace server.Controllers
             if (!AllowedAttachmentExtensions.Contains(extension))
                 return BadRequest(new { message = "Formato no válido. Se aceptan PDF, Word, Excel, JPG, PNG, WEBP y ZIP." });
 
-            var task = _repo.Get<Projects.TaskResponse>("pm.SP_GetTaskById", new DynamicParameters(new { Id = id }));
+            var task = _repo.Get<PM.TaskResponse>("pm.SP_GetTaskById", new DynamicParameters(new { Id = id }));
             if (task is null)
                 return NotFound(new { message = "Tarea no encontrada." });
 
@@ -263,7 +263,7 @@ namespace server.Controllers
             p.Add("@FileSize",         file.Length);
             p.Add("@UploadedByUserId", CurrentUserId);
 
-            var result = _repo.Get<Projects.SP_AttachmentResult>("pm.SP_InsertTaskAttachment", p);
+            var result = _repo.Get<PM.SP_AttachmentResult>("pm.SP_InsertTaskAttachment", p);
 
             if (result is null || result.Success == 0)
             {
@@ -299,7 +299,7 @@ namespace server.Controllers
         /// Elimina un adjunto de tarea: borra el archivo del contenedor y el registro en la base de datos.
         /// </summary>
         /// <param name="attachmentId">Identificador único del adjunto.</param>
-        /// <returns>200 con <see cref="Projects.SP_AttachmentResult"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.SP_AttachmentResult"/> o 404 si no existe.</returns>
         [HttpDelete("attachments/{attachmentId:guid}")]
         [RequirePermission("projects.tasks.attachment-delete", "Eliminar adjuntos de tareas")]
         public async Task<IActionResult> DeleteAttachment(Guid attachmentId)
@@ -313,7 +313,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", attachmentId);
 
-            var result = _repo.Get<Projects.SP_AttachmentResult>("pm.SP_DeleteTaskAttachment", p);
+            var result = _repo.Get<PM.SP_AttachmentResult>("pm.SP_DeleteTaskAttachment", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el adjunto." });
@@ -322,11 +322,11 @@ namespace server.Controllers
         }
 
         /// <summary>Consulta un adjunto de tarea por Id (null si no existe).</summary>
-        private Projects.AttachmentResponse? GetAttachment(Guid attachmentId)
+        private PM.AttachmentResponse? GetAttachment(Guid attachmentId)
         {
             var p = new DynamicParameters();
             p.Add("@Id", attachmentId);
-            return _repo.Get<Projects.AttachmentResponse>("pm.SP_GetTaskAttachmentById", p);
+            return _repo.Get<PM.AttachmentResponse>("pm.SP_GetTaskAttachmentById", p);
         }
 
         /// <summary>

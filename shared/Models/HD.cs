@@ -6,7 +6,7 @@ namespace shared.Models
     /// DTOs del módulo Helpdesk (schema hd). Solicitante y responsable de un
     /// ticket son empleados (ver <see cref="HR"/>).
     /// </summary>
-    public partial class Helpdesk
+    public partial class HD
     {
         // ── Categorías ────────────────────────────────────────────────────────
 

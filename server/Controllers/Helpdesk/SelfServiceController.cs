@@ -50,53 +50,53 @@ namespace server.Controllers
         }
 
         /// <summary>Retorna el ticket solo si pertenece al empleado indicado (null en caso contrario).</summary>
-        private Helpdesk.TicketResponse? GetOwnTicket(Guid ticketId, Guid employeeId)
+        private HD.TicketResponse? GetOwnTicket(Guid ticketId, Guid employeeId)
         {
             var p = new DynamicParameters();
             p.Add("@Id", ticketId);
-            var ticket = _repo.Get<Helpdesk.TicketResponse>("hd.SP_GetTicketById", p);
+            var ticket = _repo.Get<HD.TicketResponse>("hd.SP_GetTicketById", p);
             return ticket is not null && ticket.RequesterId == employeeId ? ticket : null;
         }
 
         /// <summary>Catálogo de categorías activas, para el formulario de autoservicio.</summary>
-        /// <returns>200 con la lista de <see cref="Helpdesk.CategoryResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="HD.CategoryResponse"/>.</returns>
         [HttpGet("categories")]
         public IActionResult GetCategories()
         {
             var p = new DynamicParameters();
             p.Add("@IsActive", true);
-            return Ok(_repo.GetAll<Helpdesk.CategoryResponse>("hd.SP_GetTicketCategories", p));
+            return Ok(_repo.GetAll<HD.CategoryResponse>("hd.SP_GetTicketCategories", p));
         }
 
         /// <summary>Catálogo de prioridades activas, para el formulario de autoservicio.</summary>
-        /// <returns>200 con la lista de <see cref="Helpdesk.PriorityResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="HD.PriorityResponse"/>.</returns>
         [HttpGet("priorities")]
         public IActionResult GetPriorities()
         {
             var p = new DynamicParameters();
             p.Add("@IsActive", true);
-            return Ok(_repo.GetAll<Helpdesk.PriorityResponse>("hd.SP_GetPriorities", p));
+            return Ok(_repo.GetAll<HD.PriorityResponse>("hd.SP_GetPriorities", p));
         }
 
         /// <summary>Catálogo de estados de ticket activos, para pintar los chips de "mis tickets".</summary>
-        /// <returns>200 con la lista de <see cref="Helpdesk.TicketStatusResponse"/>.</returns>
+        /// <returns>200 con la lista de <see cref="HD.TicketStatusResponse"/>.</returns>
         [HttpGet("statuses")]
         public IActionResult GetStatuses()
         {
             var p = new DynamicParameters();
             p.Add("@IsActive", true);
-            return Ok(_repo.GetAll<Helpdesk.TicketStatusResponse>("hd.SP_GetTicketStatuses", p));
+            return Ok(_repo.GetAll<HD.TicketStatusResponse>("hd.SP_GetTicketStatuses", p));
         }
 
         /// <summary>
         /// Retorna los tickets reportados por el propio usuario, del más reciente al más antiguo.
         /// </summary>
-        /// <returns>200 con la lista de <see cref="Helpdesk.TicketResponse"/> (vacía si no tiene empleado vinculado).</returns>
+        /// <returns>200 con la lista de <see cref="HD.TicketResponse"/> (vacía si no tiene empleado vinculado).</returns>
         [HttpGet("tickets")]
         public IActionResult GetMyTickets()
         {
             var employeeId = CurrentEmployeeId();
-            if (employeeId is null) return Ok(Array.Empty<Helpdesk.TicketResponse>());
+            if (employeeId is null) return Ok(Array.Empty<HD.TicketResponse>());
 
             var p = new DynamicParameters();
             p.Add("@RequesterId",  employeeId);
@@ -106,7 +106,7 @@ namespace server.Controllers
             p.Add("@StatusId",     null);
             p.Add("@IsActive",     true);
 
-            var result = _repo.GetAll<Helpdesk.TicketResponse>("hd.SP_GetTickets", p);
+            var result = _repo.GetAll<HD.TicketResponse>("hd.SP_GetTickets", p);
             return Ok(result);
         }
 
@@ -116,9 +116,9 @@ namespace server.Controllers
         /// soporte lo triage.
         /// </summary>
         /// <param name="request">Asunto, descripción, categoría y prioridad del ticket.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/>, o 400 si no hay empleado vinculado o hay error.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/>, o 400 si no hay empleado vinculado o hay error.</returns>
         [HttpPost("tickets")]
-        public IActionResult CreateMyTicket([FromBody] Helpdesk.SelfTicketRequest request)
+        public IActionResult CreateMyTicket([FromBody] HD.SelfTicketRequest request)
         {
             var employeeId = CurrentEmployeeId();
             if (employeeId is null)
@@ -132,7 +132,7 @@ namespace server.Controllers
             p.Add("@PriorityId",   request.PriorityId);
             p.Add("@AssignedToId", (Guid?)null);
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_InsertTicket", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_InsertTicket", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al crear el ticket." });
@@ -152,7 +152,7 @@ namespace server.Controllers
         /// asignado, para no interferir con soporte ya en curso.
         /// </summary>
         /// <param name="id">Identificador único del ticket.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketResult"/>, o 400/404 si no se puede eliminar o no es propio.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketResult"/>, o 400/404 si no se puede eliminar o no es propio.</returns>
         [HttpDelete("tickets/{id:guid}")]
         public IActionResult DeleteMyTicket(Guid id)
         {
@@ -171,7 +171,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", id);
 
-            var result = _repo.Get<Helpdesk.SP_TicketResult>("hd.SP_DeleteTicket", p);
+            var result = _repo.Get<HD.SP_TicketResult>("hd.SP_DeleteTicket", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el ticket." });
@@ -192,7 +192,7 @@ namespace server.Controllers
 
         /// <summary>Retorna los comentarios de un ticket propio, del más antiguo al más reciente.</summary>
         /// <param name="id">Identificador único del ticket.</param>
-        /// <returns>200 con la lista de <see cref="Helpdesk.TicketCommentResponse"/>, o 404 si el ticket no es propio.</returns>
+        /// <returns>200 con la lista de <see cref="HD.TicketCommentResponse"/>, o 404 si el ticket no es propio.</returns>
         [HttpGet("tickets/{id:guid}/comments")]
         public IActionResult GetComments(Guid id)
         {
@@ -202,15 +202,15 @@ namespace server.Controllers
 
             var p = new DynamicParameters();
             p.Add("@TicketId", id);
-            return Ok(_repo.GetAll<Helpdesk.TicketCommentResponse>("hd.SP_GetTicketComments", p));
+            return Ok(_repo.GetAll<HD.TicketCommentResponse>("hd.SP_GetTicketComments", p));
         }
 
         /// <summary>Agrega un comentario a un ticket propio, con autoría del usuario en sesión.</summary>
         /// <param name="id">Identificador único del ticket comentado.</param>
         /// <param name="request">Texto del comentario.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketCommentResult"/>, o 400/404 si hay error o el ticket no es propio.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketCommentResult"/>, o 400/404 si hay error o el ticket no es propio.</returns>
         [HttpPost("tickets/{id:guid}/comments")]
-        public IActionResult InsertComment(Guid id, [FromBody] Helpdesk.TicketCommentRequest request)
+        public IActionResult InsertComment(Guid id, [FromBody] HD.TicketCommentRequest request)
         {
             var employeeId = CurrentEmployeeId();
             if (employeeId is null) return NotFound(new { message = "Ticket no encontrado." });
@@ -225,7 +225,7 @@ namespace server.Controllers
             p.Add("@UserId",   CurrentUserId);
             p.Add("@Text",     request.Text.Trim());
 
-            var result = _repo.Get<Helpdesk.SP_TicketCommentResult>("hd.SP_InsertTicketComment", p);
+            var result = _repo.Get<HD.SP_TicketCommentResult>("hd.SP_InsertTicketComment", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al agregar el comentario." });
@@ -252,7 +252,7 @@ namespace server.Controllers
 
         /// <summary>Retorna los adjuntos de un ticket propio, del más reciente al más antiguo.</summary>
         /// <param name="id">Identificador único del ticket.</param>
-        /// <returns>200 con la lista de <see cref="Helpdesk.TicketAttachmentResponse"/>, o 404 si el ticket no es propio.</returns>
+        /// <returns>200 con la lista de <see cref="HD.TicketAttachmentResponse"/>, o 404 si el ticket no es propio.</returns>
         [HttpGet("tickets/{id:guid}/attachments")]
         public IActionResult GetAttachments(Guid id)
         {
@@ -262,7 +262,7 @@ namespace server.Controllers
 
             var p = new DynamicParameters();
             p.Add("@TicketId", id);
-            return Ok(_repo.GetAll<Helpdesk.TicketAttachmentResponse>("hd.SP_GetTicketAttachments", p));
+            return Ok(_repo.GetAll<HD.TicketAttachmentResponse>("hd.SP_GetTicketAttachments", p));
         }
 
         /// <summary>
@@ -271,7 +271,7 @@ namespace server.Controllers
         /// </summary>
         /// <param name="id">Identificador único del ticket.</param>
         /// <param name="file">Archivo de máximo 5 MB (PDF, Office, imágenes o ZIP).</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketAttachmentResult"/>, o 400/404 si el archivo no es válido, ya alcanzó el máximo o el ticket no es propio.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketAttachmentResult"/>, o 400/404 si el archivo no es válido, ya alcanzó el máximo o el ticket no es propio.</returns>
         [HttpPost("tickets/{id:guid}/attachments")]
         public async Task<IActionResult> UploadAttachment(Guid id, IFormFile file)
         {
@@ -291,7 +291,7 @@ namespace server.Controllers
 
             var countP = new DynamicParameters();
             countP.Add("@TicketId", id);
-            var existingCount = _repo.GetAll<Helpdesk.TicketAttachmentResponse>("hd.SP_GetTicketAttachments", countP).Count;
+            var existingCount = _repo.GetAll<HD.TicketAttachmentResponse>("hd.SP_GetTicketAttachments", countP).Count;
             if (existingCount >= MaxAttachmentsPerTicket)
                 return BadRequest(new { message = $"Un ticket admite máximo {MaxAttachmentsPerTicket} adjuntos." });
 
@@ -314,7 +314,7 @@ namespace server.Controllers
             p.Add("@FileSize",         file.Length);
             p.Add("@UploadedByUserId", CurrentUserId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketAttachmentResult>("hd.SP_InsertTicketAttachment", p);
+            var result = _repo.Get<HD.SP_TicketAttachmentResult>("hd.SP_InsertTicketAttachment", p);
 
             if (result is null || result.Success == 0)
             {
@@ -349,7 +349,7 @@ namespace server.Controllers
 
         /// <summary>Elimina un adjunto de un ticket propio: borra el archivo y el registro.</summary>
         /// <param name="attachmentId">Identificador único del adjunto.</param>
-        /// <returns>200 con <see cref="Helpdesk.SP_TicketAttachmentResult"/>, o 404 si no existe o no es propio.</returns>
+        /// <returns>200 con <see cref="HD.SP_TicketAttachmentResult"/>, o 404 si no existe o no es propio.</returns>
         [HttpDelete("attachments/{attachmentId:guid}")]
         public async Task<IActionResult> DeleteAttachment(Guid attachmentId)
         {
@@ -369,7 +369,7 @@ namespace server.Controllers
             var p = new DynamicParameters();
             p.Add("@Id", attachmentId);
 
-            var result = _repo.Get<Helpdesk.SP_TicketAttachmentResult>("hd.SP_DeleteTicketAttachment", p);
+            var result = _repo.Get<HD.SP_TicketAttachmentResult>("hd.SP_DeleteTicketAttachment", p);
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el adjunto." });
@@ -378,11 +378,11 @@ namespace server.Controllers
         }
 
         /// <summary>Retorna el adjunto solo si su ticket pertenece al empleado indicado.</summary>
-        private Helpdesk.TicketAttachmentResponse? GetOwnAttachment(Guid attachmentId, Guid employeeId)
+        private HD.TicketAttachmentResponse? GetOwnAttachment(Guid attachmentId, Guid employeeId)
         {
             var p = new DynamicParameters();
             p.Add("@Id", attachmentId);
-            var attachment = _repo.Get<Helpdesk.TicketAttachmentResponse>("hd.SP_GetTicketAttachmentById", p);
+            var attachment = _repo.Get<HD.TicketAttachmentResponse>("hd.SP_GetTicketAttachmentById", p);
             if (attachment is null || GetOwnTicket(attachment.TicketId, employeeId) is null)
                 return null;
             return attachment;

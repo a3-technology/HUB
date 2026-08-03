@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace shared.Models
 {
     /// <summary>
-    /// DTOs del módulo Gestión de Proyectos.
+    /// DTOs del módulo Gestión de Proyectos (schema pm).
     /// </summary>
-    public partial class Projects
+    public partial class PM
     {
         // ── Proyectos ─────────────────────────────────────────────────────────
 

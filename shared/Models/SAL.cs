@@ -6,7 +6,7 @@ namespace shared.Models
     /// DTOs del módulo Ventas (schema sal). Clientes/Contactos/Oportunidades
     /// se reutilizan de <see cref="CRM"/>.
     /// </summary>
-    public partial class Ventas
+    public partial class SAL
     {
         // ── Productos y Servicios ────────────────────────────────────────────
 
