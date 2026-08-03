@@ -1706,8 +1706,8 @@ export function EmpleadosPage() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
                 </div>
               </div>
-              {/* Fila 3: información de contacto */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Fila 3: información de contacto + país */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Correo <span className="text-red-500">*</span></label>
                   <input type="email" maxLength={150} placeholder="nombre@empresa.com" value={form.email}
@@ -1718,15 +1718,6 @@ export function EmpleadosPage() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</label>
                   <PhoneInput value={form.phone}
                     onChange={phone => setForm(f => ({ ...f, phone }))} />
-                </div>
-              </div>
-              {/* Fila 4: dirección domiciliar + país */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Dirección domiciliar</label>
-                  <textarea rows={3} maxLength={500} placeholder="Ej: Calle Principal #12, Sector Los Prados, Santo Domingo" value={form.address}
-                    onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">País</label>
@@ -1739,6 +1730,13 @@ export function EmpleadosPage() {
                     emptyLabel="No se encontraron países."
                   />
                 </div>
+              </div>
+              {/* Fila 4: dirección domiciliar */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Dirección domiciliar</label>
+                <textarea rows={3} maxLength={500} placeholder="Ej: Calle Principal #12, Sector Los Prados, Santo Domingo" value={form.address}
+                  onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none" />
               </div>
               </>)}
 
