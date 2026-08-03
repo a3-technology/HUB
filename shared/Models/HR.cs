@@ -295,22 +295,6 @@ namespace shared.Models
             public Guid?  Id      { get; set; }
         }
 
-        // ── Países (catálogo de solo lectura, sembrado con la lista completa) ──
-
-        /// <summary>
-        /// País retornado por hr.SP_GetCountries. Catálogo sin pantalla de
-        /// administración: se elige de la lista ya sembrada, igual que Moneda.
-        /// </summary>
-        public class CountryResponse
-        {
-            public Guid      Id        { get; set; }
-            public string    Name      { get; set; } = string.Empty;
-            public string?   IsoCode   { get; set; }
-            public bool      IsActive  { get; set; }
-            public DateTime  CreatedAt { get; set; }
-            public DateTime? UpdatedAt { get; set; }
-        }
-
         // ── Bancos ────────────────────────────────────────────────────────────
 
         /// <summary>

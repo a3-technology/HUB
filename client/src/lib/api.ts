@@ -83,6 +83,12 @@ export const currenciesApi = {
   remove:   (id: string)                  => apiFetch(`/api/currencies/${id}`,        { method: 'DELETE' }),
 }
 
+// ── Catálogo general — Países (solo lectura) ─────────────────────────────────
+
+export const countriesApi = {
+  list: (active?: boolean) => apiFetch(active === undefined ? '/api/countries' : `/api/countries?active=${active}`),
+}
+
 // ── Configuración de Empresa (transversal, singleton) ────────────────────────
 
 interface CompanySettingsPayload {
@@ -156,12 +162,6 @@ export const positionsApi = {
   update:   (id: string, data: PositionPayload) => apiFetch(`/api/hr/positions/${id}`, { method: 'PUT',   body: JSON.stringify(data) }),
   toggle:   (id: string)                 => apiFetch(`/api/hr/positions/${id}/toggle`, { method: 'PATCH' }),
   remove:   (id: string)                 => apiFetch(`/api/hr/positions/${id}`,        { method: 'DELETE' }),
-}
-
-// ── Módulo RR.HH. — Países (catálogo de solo lectura) ────────────────────────
-
-export const countriesApi = {
-  list: (active?: boolean) => apiFetch(active === undefined ? '/api/hr/countries' : `/api/hr/countries?active=${active}`),
 }
 
 // ── Módulo RR.HH. — Empleados ────────────────────────────────────────────────

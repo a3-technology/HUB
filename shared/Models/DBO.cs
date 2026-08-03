@@ -247,6 +247,23 @@ namespace shared.Models
             public Guid?  Id      { get; set; }
         }
 
+        // ── Países (catálogo general, de solo lectura) ──────────────────────
+
+        /// <summary>
+        /// País retornado por dbo.SP_GetCountries. Catálogo transversal (no
+        /// exclusivo de RR.HH., igual que Moneda) y de solo lectura: se elige
+        /// de la lista ya sembrada, sin pantalla propia de administración.
+        /// </summary>
+        public class CountryResponse
+        {
+            public Guid      Id        { get; set; }
+            public string    Name      { get; set; } = string.Empty;
+            public string?   IsoCode   { get; set; }
+            public bool      IsActive  { get; set; }
+            public DateTime  CreatedAt { get; set; }
+            public DateTime? UpdatedAt { get; set; }
+        }
+
         // ── Configuración de Empresa ─────────────────────────────────────────
         // Dato transversal (no pertenece a ningún módulo), singleton (una sola
         // fila en dbo.CompanySettings).
