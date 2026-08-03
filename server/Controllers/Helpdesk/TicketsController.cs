@@ -197,20 +197,23 @@ namespace server.Controllers
                 return BadRequest(new { message = "El ticket ya está cerrado; no se puede editar." });
 
             // El contenido del ticket (asunto/descripción/categoría/prioridad) solo lo puede
-            // tocar el solicitante — el responsable asignado NO alcanza (a pedido explícito
-            // del usuario: un agente asignado puede trabajar el ticket pero no editarlo).
+            // tocar el solicitante o un supervisor (helpdesk.tickets.manage-all) — el
+            // responsable asignado sin manage-all NO alcanza (a pedido explícito del
+            // usuario: un agente asignado puede trabajar el ticket pero no editarlo).
             var contentChanged =
                 request.Subject.Trim() != before.Subject ||
                 (request.Description?.Trim() ?? "") != (before.Description ?? "") ||
                 request.CategoryId != before.CategoryId ||
                 request.PriorityId != before.PriorityId;
 
-            if (contentChanged)
+            if (contentChanged && !HasManageAll)
             {
                 var employeeId = CurrentEmployeeId();
                 if (employeeId is null || before.RequesterId != employeeId)
                     return BadRequest(new { message = "Solo el solicitante de este ticket puede editar el asunto, la descripción, la categoría o la prioridad." });
             }
+
+            var priorityChanged = request.PriorityId != before.PriorityId;
 
             var p = new DynamicParameters();
             p.Add("@Id",          id);
@@ -223,6 +226,16 @@ namespace server.Controllers
 
             if (result is null || result.Success == 0)
                 return BadRequest(new { message = result?.Message ?? "Error al actualizar el ticket." });
+
+            // Avisa al solicitante si le cambiaron la prioridad (NotifyRequester ya
+            // se auto-descarta si quien edita es el propio solicitante).
+            if (priorityChanged)
+            {
+                var after = GetTicket(id);
+                if (after is not null)
+                    NotifyRequester(after, "helpdesk.ticket-priority-changed", "Cambió la prioridad de tu ticket",
+                        $"{after.Code} ahora tiene prioridad {after.PriorityName}.");
+            }
 
             return Ok(result);
         }

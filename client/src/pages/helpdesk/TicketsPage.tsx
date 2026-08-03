@@ -709,7 +709,7 @@ export function TicketsPage() {
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                         </button>
-                        {canUpdate && isMine(t) && !t.statusIsFinal && (
+                        {canUpdate && (isMine(t) || canManageAll) && !t.statusIsFinal && (
                           <button
                             onClick={() => openEdit(t)}
                             title="Editar"
