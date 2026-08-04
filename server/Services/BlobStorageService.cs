@@ -155,6 +155,10 @@ namespace server.Services
         public static string TaskAttachment(Guid taskId, string fileName) =>
             $"pm/tasks/{taskId}/attachments/{fileName}";
 
+        /// <summary>Ruta de un archivo adjunto a una nota de una empresa del CRM.</summary>
+        public static string CompanyNoteAttachment(Guid companyId, string fileName) =>
+            $"crm/companies/{companyId}/notes/{fileName}";
+
         /// <summary>Ruta del documento firmado de un contrato del módulo de Ventas.</summary>
         public static string SalesContractDocument(Guid contractId, string fileName) =>
             $"sal/contracts/{contractId}/document/{fileName}";

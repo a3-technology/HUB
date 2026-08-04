@@ -89,6 +89,12 @@ export const countriesApi = {
   list: (active?: boolean) => apiFetch(active === undefined ? '/api/countries' : `/api/countries?active=${active}`),
 }
 
+// ── Catálogo general — Industrias (solo lectura) ─────────────────────────────
+
+export const industriesApi = {
+  list: (active?: boolean) => apiFetch(active === undefined ? '/api/industries' : `/api/industries?active=${active}`),
+}
+
 // ── Configuración de Empresa (transversal, singleton) ────────────────────────
 
 interface CompanySettingsPayload {
@@ -879,53 +885,92 @@ export const taskChecklistApi = {
   remove: (id: string) => apiFetch(`/api/projects/tasks/checklist/${id}`, { method: 'DELETE' }),
 }
 
-// ── Módulo CRM — Clientes ─────────────────────────────────────────────────────
+// ── Módulo CRM — Empresas ─────────────────────────────────────────────────────
 
-interface ClientPayload {
+interface CompanyPayload {
   name: string
-  sector?: string
+  taxId?: string
+  industryId?: string
+  countryId?: string
   email?: string
   phone?: string
-  website?: string
   address?: string
-  status: string
-  estimatedValue?: number
   ownerId?: string
-  notes?: string
 }
 
-export const clientsApi = {
-  list:     (params?: { active?: boolean; status?: string }) => {
+export const companiesApi = {
+  list:     (params?: { active?: boolean }) => {
     const qs = new URLSearchParams()
     if (params?.active !== undefined) qs.set('active', String(params.active))
-    if (params?.status) qs.set('status', params.status)
     const suffix = qs.toString() ? `?${qs.toString()}` : ''
-    return apiFetch(`/api/crm/clients${suffix}`)
+    return apiFetch(`/api/crm/companies${suffix}`)
   },
-  getById:  (id: string)                      => apiFetch(`/api/crm/clients/${id}`),
-  create:   (data: ClientPayload)             => apiFetch('/api/crm/clients',       { method: 'POST',  body: JSON.stringify(data) }),
-  update:   (id: string, data: ClientPayload) => apiFetch(`/api/crm/clients/${id}`, { method: 'PUT',   body: JSON.stringify(data) }),
-  toggle:   (id: string)                      => apiFetch(`/api/crm/clients/${id}/toggle`, { method: 'PATCH' }),
-  remove:   (id: string)                      => apiFetch(`/api/crm/clients/${id}`,        { method: 'DELETE' }),
+  getById:  (id: string)                       => apiFetch(`/api/crm/companies/${id}`),
+  create:   (data: CompanyPayload)             => apiFetch('/api/crm/companies',       { method: 'POST',  body: JSON.stringify(data) }),
+  update:   (id: string, data: CompanyPayload) => apiFetch(`/api/crm/companies/${id}`, { method: 'PUT',   body: JSON.stringify(data) }),
+  toggle:   (id: string)                       => apiFetch(`/api/crm/companies/${id}/toggle`, { method: 'PATCH' }),
+  remove:   (id: string)                       => apiFetch(`/api/crm/companies/${id}`,        { method: 'DELETE' }),
+}
+
+// ── Módulo CRM — Notas de Empresa ──────────────────────────────────────────────
+
+export const companyNotesApi = {
+  list:   (companyId: string) => apiFetch(`/api/crm/companies/notes?companyId=${companyId}`),
+  create: (companyId: string, text: string, file?: File) => {
+    const formData = new FormData()
+    if (text) formData.append('text', text)
+    if (file) formData.append('file', file)
+    return apiFetch(`/api/crm/companies/notes/${companyId}`, { method: 'POST', body: formData })
+  },
+  getUrl: (id: string) => apiFetch(`/api/crm/companies/notes/${id}/url`),
+  remove: (id: string) => apiFetch(`/api/crm/companies/notes/${id}`, { method: 'DELETE' }),
+}
+
+// ── Módulo CRM — Sucursales ───────────────────────────────────────────────────
+
+interface BranchPayload {
+  companyId: string
+  name: string
+  taxId?: string
+  address?: string
+  phone?: string
+  email?: string
+  isMain: boolean
+}
+
+export const branchesApi = {
+  list:     (params?: { companyId?: string; active?: boolean }) => {
+    const qs = new URLSearchParams()
+    if (params?.companyId) qs.set('companyId', params.companyId)
+    if (params?.active !== undefined) qs.set('active', String(params.active))
+    const suffix = qs.toString() ? `?${qs.toString()}` : ''
+    return apiFetch(`/api/crm/branches${suffix}`)
+  },
+  getById:  (id: string)                      => apiFetch(`/api/crm/branches/${id}`),
+  create:   (data: BranchPayload)             => apiFetch('/api/crm/branches',       { method: 'POST',  body: JSON.stringify(data) }),
+  update:   (id: string, data: BranchPayload) => apiFetch(`/api/crm/branches/${id}`, { method: 'PUT',   body: JSON.stringify(data) }),
+  toggle:   (id: string)                      => apiFetch(`/api/crm/branches/${id}/toggle`, { method: 'PATCH' }),
+  remove:   (id: string)                      => apiFetch(`/api/crm/branches/${id}`,        { method: 'DELETE' }),
 }
 
 // ── Módulo CRM — Contactos ────────────────────────────────────────────────────
 
 interface ContactPayload {
-  clientId: string
-  firstName: string
-  lastName: string
+  companyId: string
+  branchId?: string
+  name: string
   position?: string
   email?: string
-  phone?: string
+  phones: string[]
   isPrimary: boolean
   notes?: string
 }
 
 export const contactsApi = {
-  list:     (params?: { clientId?: string; active?: boolean }) => {
+  list:     (params?: { companyId?: string; branchId?: string; active?: boolean }) => {
     const qs = new URLSearchParams()
-    if (params?.clientId) qs.set('clientId', params.clientId)
+    if (params?.companyId) qs.set('companyId', params.companyId)
+    if (params?.branchId) qs.set('branchId', params.branchId)
     if (params?.active !== undefined) qs.set('active', String(params.active))
     const suffix = qs.toString() ? `?${qs.toString()}` : ''
     return apiFetch(`/api/crm/contacts${suffix}`)

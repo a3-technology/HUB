@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, ShoppingCart, TrendingUp, DollarSign, CheckCircle2, Trash2, Save, ArrowRightCircle } from 'lucide-react'
-import { salesOrdersApi, clientsApi, contactsApi, employeeDirectoryApi, currenciesApi, productsApi } from '../../lib/api'
+import { salesOrdersApi, contactsApi, employeeDirectoryApi, currenciesApi, productsApi } from '../../lib/api'
 import { fmtMoneyWithSymbol } from '../../lib/format'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Pagination, usePagination, type PageSize } from '../../components/Pagination'
@@ -75,7 +75,6 @@ export function OrdenesVentaPage() {
   const canConvert      = usePermission('ventas.orders.convert')
 
   const [orders, setOrders]       = useState<SalesOrder[]>([])
-  const [clientList, setClientList] = useState<SearchSelectOption[]>([])
   const [employees, setEmployees] = useState<SearchSelectOption[]>([])
   const [currencies, setCurrencies] = useState<SearchSelectOption[]>([])
   const [currencySymbols, setCurrencySymbols] = useState<Record<string, string>>({})
@@ -115,13 +114,9 @@ export function OrdenesVentaPage() {
   }
 
   const loadOptions = async () => {
-    const [clRes, empRes, curRes, prodRes] = await Promise.all([
-      clientsApi.list(), employeeDirectoryApi.list(), currenciesApi.list(), productsApi.list({ active: true }),
+    const [empRes, curRes, prodRes] = await Promise.all([
+      employeeDirectoryApi.list(), currenciesApi.list(), productsApi.list({ active: true }),
     ])
-    if (clRes.ok) {
-      const data = await clRes.json()
-      setClientList(data.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })))
-    }
     if (empRes.ok) {
       const data = await empRes.json()
       setEmployees(data.map((e: { id: string; firstName: string; lastName: string; photoUrl?: string }) => ({ value: e.id, label: `${e.firstName} ${e.lastName}`, photoUrl: e.photoUrl })))
@@ -145,10 +140,10 @@ export function OrdenesVentaPage() {
   useEffect(() => {
     if (!form.clientId) { setClientContacts([]); return }
     let cancelled = false
-    contactsApi.list({ clientId: form.clientId, active: true }).then(async res => {
+    contactsApi.list({ companyId: form.clientId, active: true }).then(async res => {
       if (!res.ok || cancelled) return
-      const data: { id: string; firstName: string; lastName: string }[] = await res.json()
-      setClientContacts(data.map(c => ({ value: c.id, label: `${c.firstName} ${c.lastName}` })))
+      const data: { id: string; name: string }[] = await res.json()
+      setClientContacts(data.map(c => ({ value: c.id, label: c.name })))
     })
     return () => { cancelled = true }
   }, [form.clientId])
@@ -309,7 +304,9 @@ export function OrdenesVentaPage() {
           {canCreate && (
             <button
               onClick={openCreate}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              disabled
+              title="Deshabilitado temporalmente: el módulo de Clientes está siendo rediseñado como Empresas/Sucursales."
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg opacity-50 cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               Nueva orden
@@ -490,15 +487,9 @@ export function OrdenesVentaPage() {
 
             <div className="flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:thin] [scrollbar-color:var(--color-slate-300)_transparent] dark:[scrollbar-color:var(--color-slate-600)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cliente <span className="text-red-500">*</span></label>
-                    <SearchSelect options={clientList} value={form.clientId} onChange={v => setForm(f => ({ ...f, clientId: v, contactId: '' }))} placeholder="Selecciona un cliente…" searchPlaceholder="Buscar cliente…" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Contacto</label>
-                    <SearchSelect options={clientContacts} value={form.contactId} onChange={v => setForm(f => ({ ...f, contactId: v }))} placeholder={form.clientId ? 'Selecciona…' : 'Primero un cliente…'} searchPlaceholder="Buscar contacto…" />
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Contacto</label>
+                  <SearchSelect options={clientContacts} value={form.contactId} onChange={v => setForm(f => ({ ...f, contactId: v }))} placeholder={form.clientId ? 'Selecciona…' : 'Primero un cliente…'} searchPlaceholder="Buscar contacto…" />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">

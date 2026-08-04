@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, ClipboardList, Trash2, Save, Phone, Users, Mail, StickyNote } from 'lucide-react'
-import { activitiesApi, clientsApi, contactsApi, opportunitiesApi, employeeDirectoryApi } from '../../lib/api'
+import { activitiesApi, contactsApi, opportunitiesApi, employeeDirectoryApi } from '../../lib/api'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Pagination, usePagination, type PageSize } from '../../components/Pagination'
 import { SearchSelect, type SearchSelectOption } from '../../components/SearchSelect'
@@ -70,12 +70,10 @@ export function ActividadesPage() {
   const canDelete = usePermission('crm.activities.delete')
 
   const [activities, setActivities] = useState<Activity[]>([])
-  const [clientList, setClientList] = useState<SearchSelectOption[]>([])
   const [employees, setEmployees]   = useState<SearchSelectOption[]>([])
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch]       = useState('')
-  const [clientFilter, setClientFilter] = useState('')
   const [page, setPage]           = useState(1)
   const [pageSize, setPageSize]   = useState<PageSize>(10)
 
@@ -99,11 +97,7 @@ export function ActividadesPage() {
   }
 
   const loadOptions = async () => {
-    const [clRes, empRes] = await Promise.all([clientsApi.list(), employeeDirectoryApi.list()])
-    if (clRes.ok) {
-      const data = await clRes.json()
-      setClientList(data.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })))
-    }
+    const empRes = await employeeDirectoryApi.list()
     if (empRes.ok) {
       const data = await empRes.json()
       setEmployees(data.map((e: { id: string; firstName: string; lastName: string; photoUrl?: string }) => ({ value: e.id, label: `${e.firstName} ${e.lastName}`, photoUrl: e.photoUrl })))
@@ -119,10 +113,10 @@ export function ActividadesPage() {
   useEffect(() => {
     if (!form.clientId) { setClientContacts([]); setClientOpportunities([]); return }
     let cancelled = false
-    contactsApi.list({ clientId: form.clientId, active: true }).then(async res => {
+    contactsApi.list({ companyId: form.clientId, active: true }).then(async res => {
       if (!res.ok || cancelled) return
-      const data: { id: string; firstName: string; lastName: string }[] = await res.json()
-      setClientContacts(data.map(c => ({ value: c.id, label: `${c.firstName} ${c.lastName}` })))
+      const data: { id: string; name: string }[] = await res.json()
+      setClientContacts(data.map(c => ({ value: c.id, label: c.name })))
     })
     opportunitiesApi.list({ clientId: form.clientId, active: true }).then(async res => {
       if (!res.ok || cancelled) return
@@ -136,14 +130,13 @@ export function ActividadesPage() {
 
   const filtered = activities
     .filter(a => a.subject.toLowerCase().includes(search.toLowerCase()))
-    .filter(a => !clientFilter || a.clientId === clientFilter)
     .sort((a, b) => b.activityDate.localeCompare(a.activityDate) || b.createdAt.localeCompare(a.createdAt))
   const paginated = usePagination(filtered, page, pageSize)
 
   const toFormDate = (d?: string) => d ? d.slice(0, 10) : ''
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
 
-  const openCreate = () => { setEditing(null); setForm({ ...EMPTY_FORM, clientId: clientFilter }); setFormError(null); setModalOpen(true) }
+  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setFormError(null); setModalOpen(true) }
   const openEdit   = (a: Activity) => {
     setEditing(a)
     setForm({
@@ -230,7 +223,9 @@ export function ActividadesPage() {
           {canCreate && (
             <button
               onClick={openCreate}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              disabled
+              title="Deshabilitado temporalmente: el módulo de Clientes está siendo rediseñado como Empresas/Sucursales."
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg opacity-50 cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               Nueva actividad
@@ -239,7 +234,7 @@ export function ActividadesPage() {
         </div>
       </div>
 
-      {/* Búsqueda + filtro de cliente */}
+      {/* Búsqueda */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 min-w-0 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -250,9 +245,6 @@ export function ActividadesPage() {
             onChange={e => handleSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
           />
-        </div>
-        <div className="sm:w-64 shrink-0">
-          <SearchSelect options={clientList} value={clientFilter} onChange={v => { setClientFilter(v); setPage(1) }} placeholder="Todos los clientes" searchPlaceholder="Buscar cliente…" />
         </div>
       </div>
 
@@ -288,7 +280,7 @@ export function ActividadesPage() {
                   <td colSpan={8} className="px-5 py-16 text-center">
                     <ClipboardList className="w-9 h-9 text-slate-200 dark:text-slate-600 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">
-                      {search || clientFilter ? 'Sin resultados para el filtro aplicado.' : 'No hay actividades registradas.'}
+                      {search ? 'Sin resultados para el filtro aplicado.' : 'No hay actividades registradas.'}
                     </p>
                   </td>
                 </tr>
@@ -377,11 +369,6 @@ export function ActividadesPage() {
 
             <div className="flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:thin] [scrollbar-color:var(--color-slate-300)_transparent] dark:[scrollbar-color:var(--color-slate-600)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600">
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cliente <span className="text-red-500">*</span></label>
-                  <SearchSelect options={clientList} value={form.clientId} onChange={v => setForm(f => ({ ...f, clientId: v, contactId: v === f.clientId ? f.contactId : '', opportunityId: v === f.clientId ? f.opportunityId : '' }))} placeholder="Selecciona un cliente…" searchPlaceholder="Buscar cliente…" />
-                </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Contacto</label>

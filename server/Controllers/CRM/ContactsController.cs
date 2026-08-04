@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ namespace server.Controllers
 {
     /// <summary>
     /// Controlador del módulo CRM — Contactos.
-    /// Expone operaciones CRUD y cambio de estado para las personas de contacto de un cliente.
+    /// Expone operaciones CRUD y cambio de estado para las personas de contacto de una empresa.
     /// Todas las operaciones de base de datos se realizan a través de <see cref="IGenericRepository"/>
     /// usando los stored procedures del schema crm.
     /// </summary>
@@ -27,19 +28,24 @@ namespace server.Controllers
         }
 
         /// <summary>
-        /// Retorna la lista de contactos con filtros opcionales por cliente y estado activo.
+        /// Retorna la lista de contactos con filtros opcionales por empresa y estado activo.
         /// </summary>
-        /// <param name="clientId">Filtra los contactos de un cliente específico.</param>
+        /// <param name="companyId">Filtra los contactos de una empresa específica.</param>
+        /// <param name="branchId">Filtra los contactos de una sucursal específica.</param>
         /// <param name="active">true = solo activos | false = solo inactivos | omitir = todos.</param>
         /// <returns>200 con la lista de <see cref="CRM.ContactResponse"/>.</returns>
         [HttpGet]
-        public IActionResult GetAll([FromQuery] Guid? clientId = null, [FromQuery] bool? active = null)
+        public IActionResult GetAll([FromQuery] Guid? companyId = null, [FromQuery] Guid? branchId = null, [FromQuery] bool? active = null)
         {
             var p = new DynamicParameters();
-            p.Add("@ClientId", clientId);
-            p.Add("@IsActive", active.HasValue ? (object)active.Value : null);
+            p.Add("@CompanyId", companyId);
+            p.Add("@BranchId",  branchId);
+            p.Add("@IsActive",  active.HasValue ? (object)active.Value : null);
 
-            var result = _repo.GetAll<CRM.ContactResponse>("crm.SP_GetContacts", p);
+            var result = _repo.GetAll<CRM.ContactResponse>("crm.SP_GetContacts", p).ToList();
+            foreach (var c in result)
+                ResolvePhones(c);
+
             return Ok(result);
         }
 
@@ -58,11 +64,12 @@ namespace server.Controllers
             if (result is null)
                 return NotFound(new { message = "Contacto no encontrado." });
 
+            ResolvePhones(result);
             return Ok(result);
         }
 
         /// <summary>
-        /// Crea un nuevo contacto asociado a un cliente.
+        /// Crea un nuevo contacto asociado a una empresa.
         /// </summary>
         /// <param name="request">Datos del contacto.</param>
         /// <returns>200 con <see cref="CRM.SP_ContactResult"/> o 400 si hay error.</returns>
@@ -71,14 +78,14 @@ namespace server.Controllers
         public IActionResult Insert([FromBody] CRM.ContactRequest request)
         {
             var p = new DynamicParameters();
-            p.Add("@ClientId",  request.ClientId);
-            p.Add("@FirstName", request.FirstName.Trim());
-            p.Add("@LastName",  request.LastName.Trim());
+            p.Add("@CompanyId", request.CompanyId);
+            p.Add("@BranchId",  request.BranchId);
+            p.Add("@Name",      request.Name.Trim());
             p.Add("@Position",  request.Position?.Trim());
             p.Add("@Email",     request.Email?.Trim());
-            p.Add("@Phone",     request.Phone?.Trim());
             p.Add("@IsPrimary", request.IsPrimary);
             p.Add("@Notes",     request.Notes?.Trim());
+            p.Add("@Phones",    JsonSerializer.Serialize(request.Phones.Where(ph => !string.IsNullOrWhiteSpace(ph))));
 
             var result = _repo.Get<CRM.SP_ContactResult>("crm.SP_InsertContact", p);
 
@@ -100,14 +107,14 @@ namespace server.Controllers
         {
             var p = new DynamicParameters();
             p.Add("@Id",        id);
-            p.Add("@ClientId",  request.ClientId);
-            p.Add("@FirstName", request.FirstName.Trim());
-            p.Add("@LastName",  request.LastName.Trim());
+            p.Add("@CompanyId", request.CompanyId);
+            p.Add("@BranchId",  request.BranchId);
+            p.Add("@Name",      request.Name.Trim());
             p.Add("@Position",  request.Position?.Trim());
             p.Add("@Email",     request.Email?.Trim());
-            p.Add("@Phone",     request.Phone?.Trim());
             p.Add("@IsPrimary", request.IsPrimary);
             p.Add("@Notes",     request.Notes?.Trim());
+            p.Add("@Phones",    JsonSerializer.Serialize(request.Phones.Where(ph => !string.IsNullOrWhiteSpace(ph))));
 
             var result = _repo.Get<CRM.SP_ContactResult>("crm.SP_UpdateContact", p);
 
@@ -155,6 +162,14 @@ namespace server.Controllers
                 return BadRequest(new { message = result?.Message ?? "Error al eliminar el contacto." });
 
             return Ok(result);
+        }
+
+        /// <summary>Deserializa el arreglo JSON de teléfonos que retorna el SP hacia <see cref="CRM.ContactResponse.Phones"/>.</summary>
+        private static void ResolvePhones(CRM.ContactResponse contact)
+        {
+            contact.Phones = string.IsNullOrWhiteSpace(contact.PhonesJson)
+                ? new List<string>()
+                : JsonSerializer.Deserialize<List<string>>(contact.PhonesJson) ?? new List<string>();
         }
     }
 }

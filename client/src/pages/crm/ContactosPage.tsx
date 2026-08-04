@@ -1,23 +1,24 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, Users, Trash2, Save, Star } from 'lucide-react'
-import { contactsApi, clientsApi } from '../../lib/api'
+import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, Users, Trash2, Save, Star, GitBranch } from 'lucide-react'
+import { contactsApi, companiesApi, branchesApi } from '../../lib/api'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Pagination, usePagination, type PageSize } from '../../components/Pagination'
 import { SearchSelect, type SearchSelectOption } from '../../components/SearchSelect'
-import { PhoneInput } from '../../components/PhoneInput'
+import { PhonesListInput } from '../../components/PhonesListInput'
 import { useToast } from '../../context/ToastContext'
 import { useModalTransition } from '../../hooks/useModalTransition'
 import { usePermission } from '../../hooks/usePermission'
 
 interface Contact {
   id: string
-  clientId: string
-  clientName: string
-  firstName: string
-  lastName: string
+  companyId: string
+  companyName: string
+  branchId?: string
+  branchName?: string
+  name: string
   position?: string
   email?: string
-  phone?: string
+  phones: string[]
   isPrimary: boolean
   notes?: string
   isActive: boolean
@@ -25,18 +26,18 @@ interface Contact {
 }
 
 interface ContactForm {
-  clientId: string
-  firstName: string
-  lastName: string
+  companyId: string
+  branchId: string
+  name: string
   position: string
   email: string
-  phone: string
+  phones: string[]
   isPrimary: boolean
   notes: string
 }
 
 const EMPTY_FORM: ContactForm = {
-  clientId: '', firstName: '', lastName: '', position: '', email: '', phone: '', isPrimary: false, notes: '',
+  companyId: '', branchId: '', name: '', position: '', email: '', phones: [], isPrimary: false, notes: '',
 }
 
 export function ContactosPage() {
@@ -48,17 +49,18 @@ export function ContactosPage() {
   const canDelete = usePermission('crm.contacts.delete')
 
   const [contacts, setContacts]   = useState<Contact[]>([])
-  const [clientList, setClientList] = useState<SearchSelectOption[]>([])
+  const [companyList, setCompanyList] = useState<SearchSelectOption[]>([])
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch]       = useState('')
-  const [clientFilter, setClientFilter] = useState('')
+  const [companyFilter, setCompanyFilter] = useState('')
   const [page, setPage]           = useState(1)
   const [pageSize, setPageSize]   = useState<PageSize>(10)
 
   const [modalOpen, setModalOpen]       = useState(false)
   const [editing, setEditing]           = useState<Contact | null>(null)
   const [form, setForm]                 = useState<ContactForm>(EMPTY_FORM)
+  const [branchOptions, setBranchOptions] = useState<SearchSelectOption[]>([])
   const [formError, setFormError]       = useState<string | null>(null)
   const [saving, setSaving]             = useState(false)
   const [toggleTarget, setToggleTarget] = useState<Contact | null>(null)
@@ -76,48 +78,57 @@ export function ContactosPage() {
   }
 
   const loadOptions = async () => {
-    const res = await clientsApi.list()
+    const res = await companiesApi.list()
     if (res.ok) {
       const data = await res.json()
-      setClientList(data.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })))
+      setCompanyList(data.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })))
     }
   }
 
   useEffect(() => { load() }, [])
+
+  // Sucursales de la empresa seleccionada en el form (para escoger a cuál pertenece el contacto).
+  useEffect(() => {
+    if (!form.companyId) { setBranchOptions([]); return }
+    branchesApi.list({ companyId: form.companyId }).then(async res => {
+      if (!res.ok) { setBranchOptions([]); return }
+      const data = await res.json()
+      setBranchOptions(data.map((b: { id: string; name: string }) => ({ value: b.id, label: b.name })))
+    })
+  }, [form.companyId])
   useEffect(() => { loadOptions() }, [])
 
   const handleSearch = (value: string) => { setSearch(value); setPage(1) }
 
   const filtered = contacts
-    .filter(c => `${c.firstName} ${c.lastName}`.toLowerCase().includes(search.toLowerCase()))
-    .filter(c => !clientFilter || c.clientId === clientFilter)
+    .filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+    .filter(c => !companyFilter || c.companyId === companyFilter)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const paginated = usePagination(filtered, page, pageSize)
 
-  const openCreate = () => { setEditing(null); setForm({ ...EMPTY_FORM, clientId: clientFilter }); setFormError(null); setModalOpen(true) }
+  const openCreate = () => { setEditing(null); setForm({ ...EMPTY_FORM, companyId: companyFilter }); setFormError(null); setModalOpen(true) }
   const openEdit   = (c: Contact) => {
     setEditing(c)
     setForm({
-      clientId: c.clientId, firstName: c.firstName, lastName: c.lastName, position: c.position ?? '',
-      email: c.email ?? '', phone: c.phone ?? '', isPrimary: c.isPrimary, notes: c.notes ?? '',
+      companyId: c.companyId, branchId: c.branchId ?? '', name: c.name, position: c.position ?? '',
+      email: c.email ?? '', phones: c.phones, isPrimary: c.isPrimary, notes: c.notes ?? '',
     })
     setFormError(null); setModalOpen(true)
   }
   const closeModal = () => { setModalOpen(false); setEditing(null); setFormError(null) }
 
   const handleSave = async () => {
-    if (!form.clientId) { setFormError('El cliente es requerido.'); return }
-    if (!form.firstName.trim()) { setFormError('El nombre es requerido.'); return }
-    if (!form.lastName.trim()) { setFormError('El apellido es requerido.'); return }
+    if (!form.companyId) { setFormError('La empresa es requerida.'); return }
+    if (!form.name.trim()) { setFormError('El nombre es requerido.'); return }
     setSaving(true); setFormError(null)
     try {
       const payload = {
-        clientId: form.clientId,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
+        companyId: form.companyId,
+        branchId: form.branchId || undefined,
+        name: form.name.trim(),
         position: form.position.trim() || undefined,
         email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
+        phones: form.phones.filter(p => p.trim()),
         isPrimary: form.isPrimary,
         notes: form.notes.trim() || undefined,
       }
@@ -190,7 +201,7 @@ export function ContactosPage() {
         </div>
       </div>
 
-      {/* Búsqueda + filtro de cliente */}
+      {/* Búsqueda + filtro de empresa */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 min-w-0 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -203,7 +214,7 @@ export function ContactosPage() {
           />
         </div>
         <div className="sm:w-64 shrink-0">
-          <SearchSelect options={clientList} value={clientFilter} onChange={v => { setClientFilter(v); setPage(1) }} placeholder="Todos los clientes" searchPlaceholder="Buscar cliente…" />
+          <SearchSelect options={companyList} value={companyFilter} onChange={v => { setCompanyFilter(v); setPage(1) }} placeholder="Todas las empresas" searchPlaceholder="Buscar empresa…" />
         </div>
       </div>
 
@@ -215,10 +226,11 @@ export function ContactosPage() {
               <tr className="bg-slate-50 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700">
                 <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-12">#</th>
                 <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Contacto</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cliente</th>
+                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Empresa</th>
+                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sucursal</th>
                 <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cargo</th>
                 <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Teléfono</th>
+                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Teléfono(s)</th>
                 <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Estado</th>
                 <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -227,7 +239,7 @@ export function ContactosPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-slate-50 dark:border-slate-700/40">
-                    {[8, 40, 32, 24, 32, 24, 20, 20].map((w, j) => (
+                    {[8, 40, 32, 24, 24, 32, 24, 20, 20].map((w, j) => (
                       <td key={j} className="px-5 py-2">
                         <div className="h-4 bg-slate-100 dark:bg-slate-700 rounded animate-pulse" style={{ width: `${w * 4}px` }} />
                       </td>
@@ -236,10 +248,10 @@ export function ContactosPage() {
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-16 text-center">
+                  <td colSpan={9} className="px-5 py-16 text-center">
                     <Users className="w-9 h-9 text-slate-200 dark:text-slate-600 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">
-                      {search || clientFilter ? 'Sin resultados para el filtro aplicado.' : 'No hay contactos registrados.'}
+                      {search || companyFilter ? 'Sin resultados para el filtro aplicado.' : 'No hay contactos registrados.'}
                     </p>
                   </td>
                 </tr>
@@ -254,7 +266,7 @@ export function ContactosPage() {
                     </td>
                     <td className="px-5 py-2 text-left align-middle">
                       <div className="flex items-center gap-1.5">
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">{c.firstName} {c.lastName}</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">{c.name}</p>
                         {c.isPrimary && (
                           <span title="Contacto principal">
                             <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
@@ -262,10 +274,20 @@ export function ContactosPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-2 text-slate-600 dark:text-slate-300 text-left align-middle">{c.clientName}</td>
+                    <td className="px-5 py-2 text-slate-600 dark:text-slate-300 text-left align-middle">{c.companyName}</td>
+                    <td className="px-5 py-2 text-left align-middle">
+                      {c.branchName ? (
+                        <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                          <GitBranch className="w-3.5 h-3.5 text-slate-400" />
+                          {c.branchName}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300 dark:text-slate-600">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-2 text-slate-600 dark:text-slate-300 text-left align-middle">{c.position || '—'}</td>
                     <td className="px-5 py-2 text-slate-600 dark:text-slate-300 text-left align-middle">{c.email || '—'}</td>
-                    <td className="px-5 py-2 text-slate-600 dark:text-slate-300 text-left align-middle">{c.phone || '—'}</td>
+                    <td className="px-5 py-2 text-slate-600 dark:text-slate-300 text-left align-middle">{c.phones.length > 0 ? c.phones.join(', ') : '—'}</td>
                     <td className="px-5 py-2 text-center align-middle">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
                         c.isActive
@@ -335,51 +357,50 @@ export function ContactosPage() {
 
             <div className="flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:thin] [scrollbar-color:var(--color-slate-300)_transparent] dark:[scrollbar-color:var(--color-slate-600)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600">
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cliente <span className="text-red-500">*</span></label>
-                  <SearchSelect options={clientList} value={form.clientId} onChange={v => setForm(f => ({ ...f, clientId: v }))} placeholder="Selecciona un cliente…" searchPlaceholder="Buscar cliente…" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Empresa <span className="text-red-500">*</span></label>
+                    <SearchSelect options={companyList} value={form.companyId} onChange={v => setForm(f => ({ ...f, companyId: v, branchId: '' }))} placeholder="Selecciona una empresa…" searchPlaceholder="Buscar empresa…" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Sucursal</label>
+                    <SearchSelect options={branchOptions} value={form.branchId} onChange={v => setForm(f => ({ ...f, branchId: v }))}
+                      placeholder={form.companyId ? 'Ninguna (contacto de la empresa)' : 'Selecciona primero una empresa'} searchPlaceholder="Buscar sucursal…" />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nombre <span className="text-red-500">*</span></label>
-                    <input type="text" maxLength={100} placeholder="Nombre" value={form.firstName}
-                      onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
+                    <input type="text" maxLength={200} placeholder="Nombre del contacto" value={form.name}
+                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Apellido <span className="text-red-500">*</span></label>
-                    <input type="text" maxLength={100} placeholder="Apellido" value={form.lastName}
-                      onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Puesto</label>
+                    <input type="text" maxLength={100} placeholder="Ej: Gerente de compras" value={form.position}
+                      onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
                       className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo</label>
-                  <input type="text" maxLength={100} placeholder="Ej: Gerente de Compras" value={form.position}
-                    onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Correo electrónico</label>
+                  <input type="email" maxLength={200} placeholder="contacto@empresa.com" value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
-                    <input type="email" maxLength={200} placeholder="correo@empresa.com" value={form.email}
-                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</label>
-                    <PhoneInput value={form.phone} onChange={phone => setForm(f => ({ ...f, phone }))} />
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Teléfonos</label>
+                  <PhonesListInput value={form.phones} onChange={phones => setForm(f => ({ ...f, phones }))} />
                 </div>
 
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input type="checkbox" checked={form.isPrimary}
                     onChange={e => setForm(f => ({ ...f, isPrimary: e.target.checked }))}
                     className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0" />
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Contacto principal del cliente</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Contacto principal de la empresa</span>
                 </label>
 
                 <div className="space-y-1.5">
@@ -419,8 +440,8 @@ export function ContactosPage() {
         title={toggleTarget?.isActive ? '¿Desactivar contacto?' : '¿Activar contacto?'}
         message={
           toggleTarget?.isActive
-            ? `El contacto "${toggleTarget.firstName} ${toggleTarget.lastName}" será desactivado.`
-            : `El contacto "${toggleTarget?.firstName} ${toggleTarget?.lastName}" volverá a estar disponible.`
+            ? `El contacto "${toggleTarget.name}" será desactivado.`
+            : `El contacto "${toggleTarget?.name}" volverá a estar disponible.`
         }
         confirmLabel={toggleTarget?.isActive ? 'Sí, desactivar' : 'Sí, activar'}
         cancelLabel="Cancelar"
@@ -431,7 +452,7 @@ export function ContactosPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="¿Eliminar contacto?"
-        message={`El contacto "${deleteTarget?.firstName} ${deleteTarget?.lastName}" se eliminará permanentemente. Esta acción no se puede deshacer.`}
+        message={`El contacto "${deleteTarget?.name}" se eliminará permanentemente. Esta acción no se puede deshacer.`}
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
         onConfirm={handleDelete}

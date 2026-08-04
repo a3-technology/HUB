@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, LogOut, X,
   Users, Building2, BriefcaseBusiness, Wallet, CalendarCheck, UserPlus, TreePalm, FileSignature,
-  ChevronDown, Handshake, BookUser, Target, ClipboardList, BarChart2,
+  ChevronDown, Handshake, BookUser, Target, ClipboardList, BarChart2, GitBranch,
   ShieldCheck, UserCog, KeyRound,
   FolderKanban, ListTodo, GanttChartSquare, Gauge,
   ShoppingBag, Package, FileText, ShoppingCart,
@@ -75,7 +75,8 @@ const MODULE_SECTIONS: NavSection[] = [
     label: 'CRM',
     icon: Handshake,
     items: [
-      { to: '/crm/clientes',      icon: Building2,     label: 'Clientes',      anyPrefix: ['crm.clients.'] },
+      { to: '/crm/empresas',      icon: Building2,     label: 'Empresas',      anyPrefix: ['crm.companies.'] },
+      { to: '/crm/sucursales',    icon: GitBranch,     label: 'Sucursales',    anyPrefix: ['crm.branches.'] },
       { to: '/crm/contactos',     icon: BookUser,      label: 'Contactos',     anyPrefix: ['crm.contacts.'] },
       { to: '/crm/oportunidades', icon: Target,        label: 'Oportunidades', anyPrefix: ['crm.opportunities.'] },
       { to: '/crm/actividades',   icon: ClipboardList, label: 'Actividades',   anyPrefix: ['crm.activities.'] },

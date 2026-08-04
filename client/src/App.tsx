@@ -18,7 +18,8 @@ import { AsistenciaPage } from './pages/hr/AsistenciaPage'
 import { VacacionesPage } from './pages/hr/VacacionesPage'
 import { ReclutamientoPage } from './pages/hr/ReclutamientoPage'
 import { ReportesPage as HrReportesPage } from './pages/hr/ReportesPage'
-import { ClientesPage } from './pages/crm/ClientesPage'
+import { EmpresasPage } from './pages/crm/EmpresasPage'
+import { SucursalesPage } from './pages/crm/SucursalesPage'
 import { ContactosPage } from './pages/crm/ContactosPage'
 import { OportunidadesPage } from './pages/crm/OportunidadesPage'
 import { ActividadesPage } from './pages/crm/ActividadesPage'
@@ -70,7 +71,8 @@ function App() {
               <Route path="/hr/vacaciones"       element={<RequireModule module="hr"><VacacionesPage /></RequireModule>}    />
               <Route path="/hr/reclutamiento"    element={<RequireModule module="hr"><ReclutamientoPage /></RequireModule>} />
               <Route path="/hr/reportes"         element={<RequireModule module="hr" permission="hr.reports.view"><HrReportesPage /></RequireModule>} />
-              <Route path="/crm/clientes"        element={<RequireModule module="crm"><ClientesPage /></RequireModule>}      />
+              <Route path="/crm/empresas"        element={<RequireModule module="crm"><EmpresasPage /></RequireModule>}      />
+              <Route path="/crm/sucursales"      element={<RequireModule module="crm"><SucursalesPage /></RequireModule>}    />
               <Route path="/crm/contactos"       element={<RequireModule module="crm"><ContactosPage /></RequireModule>}     />
               <Route path="/crm/oportunidades"   element={<RequireModule module="crm"><OportunidadesPage /></RequireModule>} />
               <Route path="/crm/actividades"     element={<RequireModule module="crm"><ActividadesPage /></RequireModule>}   />

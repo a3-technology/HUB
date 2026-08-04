@@ -7,42 +7,46 @@ namespace shared.Models
     /// </summary>
     public partial class CRM
     {
-        // ── Clientes ──────────────────────────────────────────────────────────
+        // ── Empresas ──────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Cliente retornado por los SPs de consulta.
-        /// Mapea el resultado de crm.SP_GetClients y crm.SP_GetClientById.
+        /// Empresa retornada por los SPs de consulta.
+        /// Mapea el resultado de crm.SP_GetCompanies y crm.SP_GetCompanyById.
         /// </summary>
-        public class ClientResponse
+        public class CompanyResponse
         {
-            public Guid     Id                 { get; set; }
-            public string   Name               { get; set; } = string.Empty;
-            public string?  Sector             { get; set; }
-            public string?  Email              { get; set; }
-            public string?  Phone              { get; set; }
-            public string?  Website            { get; set; }
-            public string?  Address            { get; set; }
-            public string   Status             { get; set; } = string.Empty;
-            public decimal? EstimatedValue     { get; set; }
-            public Guid?    OwnerId            { get; set; }
-            public string?  OwnerName          { get; set; }
-            public string?  OwnerPhotoUrl      { get; set; }
-            public string?  PrimaryContactName { get; set; }
-            public string?  Notes              { get; set; }
-            public bool     IsActive           { get; set; }
-            public DateTime CreatedAt          { get; set; }
-            public DateTime? UpdatedAt         { get; set; }
+            public Guid     Id             { get; set; }
+            public string   Name           { get; set; } = string.Empty;
+            public string?  TaxId          { get; set; }
+            public Guid?    IndustryId     { get; set; }
+            public string?  IndustryName   { get; set; }
+            public Guid?    CountryId      { get; set; }
+            public string?  CountryName    { get; set; }
+            public string?  Email          { get; set; }
+            public string?  Phone          { get; set; }
+            public string?  Address        { get; set; }
+            public Guid?    OwnerId        { get; set; }
+            public string?  OwnerName      { get; set; }
+            public string?  OwnerPhotoUrl  { get; set; }
+            public int      BranchCount    { get; set; }
+            public bool     IsActive       { get; set; }
+            public DateTime CreatedAt      { get; set; }
+            public DateTime? UpdatedAt     { get; set; }
         }
 
-        /// <summary>Cuerpo de la solicitud para crear o actualizar un cliente.</summary>
-        public class ClientRequest
+        /// <summary>Cuerpo de la solicitud para crear o actualizar una empresa.</summary>
+        public class CompanyRequest
         {
             [Required(ErrorMessage = "El nombre es requerido.")]
             [MaxLength(200, ErrorMessage = "El nombre no puede superar 200 caracteres.")]
             public string Name { get; set; } = string.Empty;
 
-            [MaxLength(100, ErrorMessage = "El sector no puede superar 100 caracteres.")]
-            public string? Sector { get; set; }
+            [MaxLength(50, ErrorMessage = "La identificación fiscal no puede superar 50 caracteres.")]
+            public string? TaxId { get; set; }
+
+            public Guid? IndustryId { get; set; }
+
+            public Guid? CountryId { get; set; }
 
             [MaxLength(200, ErrorMessage = "El correo no puede superar 200 caracteres.")]
             public string? Email { get; set; }
@@ -50,25 +54,94 @@ namespace shared.Models
             [MaxLength(30, ErrorMessage = "El teléfono no puede superar 30 caracteres.")]
             public string? Phone { get; set; }
 
-            [MaxLength(200, ErrorMessage = "El sitio web no puede superar 200 caracteres.")]
-            public string? Website { get; set; }
+            [MaxLength(300, ErrorMessage = "La dirección no puede superar 300 caracteres.")]
+            public string? Address { get; set; }
+
+            public Guid? OwnerId { get; set; }
+        }
+
+        /// <summary>Resultado estándar de los SPs de escritura de empresas (insert/update/toggle/delete).</summary>
+        public class SP_CompanyResult
+        {
+            public int    Success { get; set; }
+            public string Message { get; set; } = string.Empty;
+            public Guid?  Id      { get; set; }
+        }
+
+        /// <summary>
+        /// Nota de una empresa retornada por crm.SP_GetCompanyNotes, con archivo
+        /// adjunto opcional (Azure Blob Storage).
+        /// </summary>
+        public class CompanyNoteResponse
+        {
+            public Guid     Id         { get; set; }
+            public Guid     CompanyId  { get; set; }
+            public Guid     UserId     { get; set; }
+            public string   AuthorName { get; set; } = string.Empty;
+            public string?  Text       { get; set; }
+            public string?  FileName   { get; set; }
+            public string?  BlobPath   { get; set; }
+            public long?    FileSize   { get; set; }
+            public DateTime CreatedAt  { get; set; }
+        }
+
+        /// <summary>Resultado estándar de los SPs de escritura de notas de empresa (insert/delete).</summary>
+        public class SP_CompanyNoteResult
+        {
+            public int    Success { get; set; }
+            public string Message { get; set; } = string.Empty;
+            public Guid?  Id      { get; set; }
+        }
+
+        // ── Sucursales ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Sucursal retornada por los SPs de consulta.
+        /// Mapea el resultado de crm.SP_GetBranches y crm.SP_GetBranchById.
+        /// </summary>
+        public class BranchResponse
+        {
+            public Guid     Id          { get; set; }
+            public Guid     CompanyId   { get; set; }
+            public string   CompanyName { get; set; } = string.Empty;
+            public string   Name        { get; set; } = string.Empty;
+            public string?  TaxId       { get; set; }
+            public string?  Address     { get; set; }
+            public string?  Phone       { get; set; }
+            public string?  Email       { get; set; }
+            public bool     IsMain      { get; set; }
+            public bool     IsActive    { get; set; }
+            public DateTime CreatedAt   { get; set; }
+            public DateTime? UpdatedAt  { get; set; }
+        }
+
+        /// <summary>Cuerpo de la solicitud para crear o actualizar una sucursal.</summary>
+        public class BranchRequest
+        {
+            [Required(ErrorMessage = "La empresa es requerida.")]
+            public Guid CompanyId { get; set; }
+
+            [Required(ErrorMessage = "El nombre es requerido.")]
+            [MaxLength(150, ErrorMessage = "El nombre no puede superar 150 caracteres.")]
+            public string Name { get; set; } = string.Empty;
+
+            [MaxLength(50, ErrorMessage = "El N° de identificación no puede superar 50 caracteres.")]
+            public string? TaxId { get; set; }
 
             [MaxLength(300, ErrorMessage = "La dirección no puede superar 300 caracteres.")]
             public string? Address { get; set; }
 
-            [Required(ErrorMessage = "El estado es requerido.")]
-            public string Status { get; set; } = string.Empty;
+            [MaxLength(30, ErrorMessage = "El teléfono no puede superar 30 caracteres.")]
+            public string? Phone { get; set; }
 
-            public decimal? EstimatedValue { get; set; }
+            [MaxLength(200, ErrorMessage = "El correo no puede superar 200 caracteres.")]
+            public string? Email { get; set; }
 
-            public Guid? OwnerId { get; set; }
-
-            [MaxLength(1000, ErrorMessage = "Las notas no pueden superar 1000 caracteres.")]
-            public string? Notes { get; set; }
+            public bool IsMain { get; set; }
         }
 
-        /// <summary>Resultado estándar de los SPs de escritura de clientes (insert/update/toggle/delete).</summary>
-        public class SP_ClientResult
+        /// <summary>Resultado estándar de los SPs de escritura de sucursales (insert/update/toggle/delete).</summary>
+        public class SP_BranchResult
         {
             public int    Success { get; set; }
             public string Message { get; set; } = string.Empty;
@@ -83,34 +156,38 @@ namespace shared.Models
         /// </summary>
         public class ContactResponse
         {
-            public Guid     Id         { get; set; }
-            public Guid     ClientId   { get; set; }
-            public string   ClientName { get; set; } = string.Empty;
-            public string   FirstName  { get; set; } = string.Empty;
-            public string   LastName   { get; set; } = string.Empty;
-            public string?  Position   { get; set; }
-            public string?  Email      { get; set; }
-            public string?  Phone      { get; set; }
-            public bool     IsPrimary  { get; set; }
-            public string?  Notes      { get; set; }
-            public bool     IsActive   { get; set; }
-            public DateTime CreatedAt  { get; set; }
-            public DateTime? UpdatedAt { get; set; }
+            public Guid     Id          { get; set; }
+            public Guid     CompanyId   { get; set; }
+            public string   CompanyName { get; set; } = string.Empty;
+            public Guid?    BranchId    { get; set; }
+            public string?  BranchName  { get; set; }
+            public string   Name        { get; set; } = string.Empty;
+            public string?  Position    { get; set; }
+            public string?  Email       { get; set; }
+
+            /// <summary>Crudo tal como lo retorna el SP (arreglo JSON de strings); no se serializa al cliente.</summary>
+            [System.Text.Json.Serialization.JsonIgnore]
+            public string?  PhonesJson  { get; set; }
+
+            public List<string> Phones  { get; set; } = new();
+            public bool     IsPrimary   { get; set; }
+            public string?  Notes       { get; set; }
+            public bool     IsActive    { get; set; }
+            public DateTime CreatedAt   { get; set; }
+            public DateTime? UpdatedAt  { get; set; }
         }
 
         /// <summary>Cuerpo de la solicitud para crear o actualizar un contacto.</summary>
         public class ContactRequest
         {
-            [Required(ErrorMessage = "El cliente es requerido.")]
-            public Guid ClientId { get; set; }
+            [Required(ErrorMessage = "La empresa es requerida.")]
+            public Guid CompanyId { get; set; }
+
+            public Guid? BranchId { get; set; }
 
             [Required(ErrorMessage = "El nombre es requerido.")]
-            [MaxLength(100, ErrorMessage = "El nombre no puede superar 100 caracteres.")]
-            public string FirstName { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "El apellido es requerido.")]
-            [MaxLength(100, ErrorMessage = "El apellido no puede superar 100 caracteres.")]
-            public string LastName { get; set; } = string.Empty;
+            [MaxLength(200, ErrorMessage = "El nombre no puede superar 200 caracteres.")]
+            public string Name { get; set; } = string.Empty;
 
             [MaxLength(100, ErrorMessage = "El cargo no puede superar 100 caracteres.")]
             public string? Position { get; set; }
@@ -118,8 +195,7 @@ namespace shared.Models
             [MaxLength(200, ErrorMessage = "El correo no puede superar 200 caracteres.")]
             public string? Email { get; set; }
 
-            [MaxLength(30, ErrorMessage = "El teléfono no puede superar 30 caracteres.")]
-            public string? Phone { get; set; }
+            public List<string> Phones { get; set; } = new();
 
             public bool IsPrimary { get; set; }
 

@@ -264,6 +264,20 @@ namespace shared.Models
             public DateTime? UpdatedAt { get; set; }
         }
 
+        /// <summary>
+        /// Industria retornada por dbo.SP_GetIndustries. Catálogo transversal
+        /// (usado hoy por Empresas en CRM) y de solo lectura: se elige de la
+        /// lista ya sembrada, sin pantalla propia de administración.
+        /// </summary>
+        public class IndustryResponse
+        {
+            public Guid      Id        { get; set; }
+            public string    Name      { get; set; } = string.Empty;
+            public bool      IsActive  { get; set; }
+            public DateTime  CreatedAt { get; set; }
+            public DateTime? UpdatedAt { get; set; }
+        }
+
         // ── Configuración de Empresa ─────────────────────────────────────────
         // Dato transversal (no pertenece a ningún módulo), singleton (una sola
         // fila en dbo.CompanySettings).

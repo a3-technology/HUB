@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, FileSignature, TrendingUp, DollarSign, CheckCircle2, Trash2, Save, Upload, FileDown, X } from 'lucide-react'
-import { contractsApi, clientsApi, employeeDirectoryApi, currenciesApi } from '../../lib/api'
+import { contractsApi, employeeDirectoryApi, currenciesApi } from '../../lib/api'
 import { fmtMoneyWithSymbol } from '../../lib/format'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Pagination, usePagination, type PageSize } from '../../components/Pagination'
@@ -73,7 +73,6 @@ export function ContratosPage() {
   const canDeleteDocument = usePermission('ventas.contracts.document-delete')
 
   const [contracts, setContracts] = useState<Contract[]>([])
-  const [clientList, setClientList] = useState<SearchSelectOption[]>([])
   const [employees, setEmployees] = useState<SearchSelectOption[]>([])
   const [currencies, setCurrencies] = useState<SearchSelectOption[]>([])
   const [loading, setLoading]     = useState(true)
@@ -107,11 +106,7 @@ export function ContratosPage() {
   }
 
   const loadOptions = async () => {
-    const [clRes, empRes, curRes] = await Promise.all([clientsApi.list(), employeeDirectoryApi.list(), currenciesApi.list()])
-    if (clRes.ok) {
-      const data = await clRes.json()
-      setClientList(data.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })))
-    }
+    const [empRes, curRes] = await Promise.all([employeeDirectoryApi.list(), currenciesApi.list()])
     if (empRes.ok) {
       const data = await empRes.json()
       setEmployees(data.map((e: { id: string; firstName: string; lastName: string; photoUrl?: string }) => ({ value: e.id, label: `${e.firstName} ${e.lastName}`, photoUrl: e.photoUrl })))
@@ -284,7 +279,9 @@ export function ContratosPage() {
           {canCreate && (
             <button
               onClick={openCreate}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              disabled
+              title="Deshabilitado temporalmente: el módulo de Clientes está siendo rediseñado como Empresas/Sucursales."
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg opacity-50 cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               Nuevo contrato
@@ -481,11 +478,6 @@ export function ContratosPage() {
 
             <div className="flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:thin] [scrollbar-color:var(--color-slate-300)_transparent] dark:[scrollbar-color:var(--color-slate-600)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600">
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cliente <span className="text-red-500">*</span></label>
-                  <SearchSelect options={clientList} value={form.clientId} onChange={v => setForm(f => ({ ...f, clientId: v }))} placeholder="Selecciona un cliente…" searchPlaceholder="Buscar cliente…" />
-                </div>
-
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Título <span className="text-red-500">*</span></label>
                   <input type="text" maxLength={200} placeholder="Ej: Contrato de servicios anual" value={form.title}
