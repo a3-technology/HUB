@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Pagination, usePagination, type PageSize } from '../../components/Pagination'
 import { SearchSelect, type SearchSelectOption } from '../../components/SearchSelect'
 import { PhonesListInput } from '../../components/PhonesListInput'
+import { ThSortFilter } from '../../components/ThSortFilter'
 import { useToast } from '../../context/ToastContext'
 import { useModalTransition } from '../../hooks/useModalTransition'
 import { usePermission } from '../../hooks/usePermission'
@@ -23,6 +24,22 @@ interface Contact {
   notes?: string
   isActive: boolean
   createdAt: string
+}
+
+/** Columnas de la tabla que admiten ordenamiento y filtrado. */
+type SortKey = 'name' | 'company' | 'branch' | 'position' | 'email' | 'phone' | 'status'
+
+/** Valor textual de un contacto para la columna indicada (base para ordenar y filtrar). */
+const colValue = (c: Contact, key: SortKey): string => {
+  switch (key) {
+    case 'name':     return c.name
+    case 'company':  return c.companyName
+    case 'branch':   return c.branchName ?? ''
+    case 'position': return c.position ?? ''
+    case 'email':    return c.email ?? ''
+    case 'phone':    return c.phones.join(', ')
+    case 'status':   return c.isActive ? 'Activo' : 'Inactivo'
+  }
 }
 
 interface ContactForm {
@@ -56,6 +73,9 @@ export function ContactosPage() {
   const [companyFilter, setCompanyFilter] = useState('')
   const [page, setPage]           = useState(1)
   const [pageSize, setPageSize]   = useState<PageSize>(10)
+  const [sortKey, setSortKey]             = useState<SortKey>('name')
+  const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('asc')
+  const [columnFilters, setColumnFilters] = useState<Partial<Record<SortKey, string[]>>>({})
 
   const [modalOpen, setModalOpen]       = useState(false)
   const [editing, setEditing]           = useState<Contact | null>(null)
@@ -100,10 +120,30 @@ export function ContactosPage() {
 
   const handleSearch = (value: string) => { setSearch(value); setPage(1) }
 
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const setColumnFilter = (key: SortKey, values: string[]) => {
+    setColumnFilters(prev => ({ ...prev, [key]: values }))
+    setPage(1)
+  }
+  /** Valores únicos de una columna (sobre todos los contactos) para el popover de filtro. */
+  const filterOptions = (key: SortKey) =>
+    Array.from(new Set(contacts.map(c => colValue(c, key)))).sort((a, b) => a.localeCompare(b, 'es'))
+
   const filtered = contacts
     .filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
     .filter(c => !companyFilter || c.companyId === companyFilter)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .filter(c =>
+      (Object.entries(columnFilters) as [SortKey, string[]][])
+        .every(([key, values]) => values.length === 0 || values.includes(colValue(c, key)))
+    )
+    .sort((a, b) => {
+      const cmp = colValue(a, sortKey).localeCompare(colValue(b, sortKey), 'es', { numeric: true, sensitivity: 'base' })
+      return sortDir === 'asc' ? cmp : -cmp
+    })
   const paginated = usePagination(filtered, page, pageSize)
 
   const openCreate = () => { setEditing(null); setForm({ ...EMPTY_FORM, companyId: companyFilter }); setFormError(null); setModalOpen(true) }
@@ -225,13 +265,28 @@ export function ContactosPage() {
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700">
                 <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-12">#</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Contacto</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Empresa</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sucursal</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cargo</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Teléfono(s)</th>
-                <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Estado</th>
+                {([
+                  { label: 'Contacto', colKey: 'name'     as SortKey, align: 'left'   as const },
+                  { label: 'Empresa',  colKey: 'company'  as SortKey, align: 'left'   as const },
+                  { label: 'Sucursal', colKey: 'branch'   as SortKey, align: 'left'   as const },
+                  { label: 'Cargo',    colKey: 'position' as SortKey, align: 'left'   as const },
+                  { label: 'Email',    colKey: 'email'    as SortKey, align: 'left'   as const },
+                  { label: 'Teléfono(s)', colKey: 'phone' as SortKey, align: 'left'   as const },
+                  { label: 'Estado',   colKey: 'status'   as SortKey, align: 'center' as const },
+                ]).map(col => (
+                  <ThSortFilter
+                    key={col.colKey}
+                    label={col.label}
+                    colKey={col.colKey}
+                    align={col.align}
+                    activeSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    options={filterOptions(col.colKey)}
+                    selected={columnFilters[col.colKey] ?? []}
+                    onFilterChange={setColumnFilter}
+                  />
+                ))}
                 <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>

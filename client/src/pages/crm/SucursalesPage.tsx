@@ -7,6 +7,7 @@ import { SearchSelect, type SearchSelectOption } from '../../components/SearchSe
 import { PhoneInput } from '../../components/PhoneInput'
 import { PhonesListInput } from '../../components/PhonesListInput'
 import { TabsScroller } from '../../components/TabsScroller'
+import { ThSortFilter } from '../../components/ThSortFilter'
 import { BranchDetailOffcanvas } from '../../components/BranchDetailOffcanvas'
 import { useToast } from '../../context/ToastContext'
 import { useModalTransition } from '../../hooks/useModalTransition'
@@ -24,6 +25,20 @@ interface Branch {
   isMain: boolean
   isActive: boolean
   createdAt: string
+}
+
+/** Columnas de la tabla que admiten ordenamiento y filtrado. */
+type SortKey = 'name' | 'company' | 'address' | 'phone' | 'status'
+
+/** Valor textual de una sucursal para la columna indicada (base para ordenar y filtrar). */
+const colValue = (b: Branch, key: SortKey): string => {
+  switch (key) {
+    case 'name':    return b.name
+    case 'company': return b.companyName
+    case 'address': return b.address ?? ''
+    case 'phone':   return b.phone ?? ''
+    case 'status':  return b.isActive ? 'Activa' : 'Inactiva'
+  }
 }
 
 interface BranchForm {
@@ -75,6 +90,9 @@ export function SucursalesPage() {
   const [companyFilter, setCompanyFilter] = useState('')
   const [page, setPage]           = useState(1)
   const [pageSize, setPageSize]   = useState<PageSize>(10)
+  const [sortKey, setSortKey]             = useState<SortKey>('name')
+  const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('asc')
+  const [columnFilters, setColumnFilters] = useState<Partial<Record<SortKey, string[]>>>({})
 
   const [modalOpen, setModalOpen]       = useState(false)
   const [editing, setEditing]           = useState<Branch | null>(null)
@@ -119,10 +137,30 @@ export function SucursalesPage() {
 
   const handleSearch = (value: string) => { setSearch(value); setPage(1) }
 
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const setColumnFilter = (key: SortKey, values: string[]) => {
+    setColumnFilters(prev => ({ ...prev, [key]: values }))
+    setPage(1)
+  }
+  /** Valores únicos de una columna (sobre todas las sucursales) para el popover de filtro. */
+  const filterOptions = (key: SortKey) =>
+    Array.from(new Set(branches.map(b => colValue(b, key)))).sort((a, b) => a.localeCompare(b, 'es'))
+
   const filtered = branches
     .filter(b => b.name.toLowerCase().includes(search.toLowerCase()))
     .filter(b => !companyFilter || b.companyId === companyFilter)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .filter(b =>
+      (Object.entries(columnFilters) as [SortKey, string[]][])
+        .every(([key, values]) => values.length === 0 || values.includes(colValue(b, key)))
+    )
+    .sort((a, b) => {
+      const cmp = colValue(a, sortKey).localeCompare(colValue(b, sortKey), 'es', { numeric: true, sensitivity: 'base' })
+      return sortDir === 'asc' ? cmp : -cmp
+    })
   const paginated = usePagination(filtered, page, pageSize)
 
   const loadBranchContacts = async (branchId: string) => {
@@ -331,11 +369,26 @@ export function SucursalesPage() {
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700">
                 <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-12">#</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sucursal</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Empresa</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Dirección</th>
-                <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Teléfono</th>
-                <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Estado</th>
+                {([
+                  { label: 'Sucursal',   colKey: 'name'    as SortKey, align: 'left'   as const },
+                  { label: 'Empresa',    colKey: 'company' as SortKey, align: 'left'   as const },
+                  { label: 'Dirección',  colKey: 'address' as SortKey, align: 'left'   as const },
+                  { label: 'Teléfono',   colKey: 'phone'   as SortKey, align: 'left'   as const },
+                  { label: 'Estado',     colKey: 'status'  as SortKey, align: 'center' as const },
+                ]).map(col => (
+                  <ThSortFilter
+                    key={col.colKey}
+                    label={col.label}
+                    colKey={col.colKey}
+                    align={col.align}
+                    activeSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    options={filterOptions(col.colKey)}
+                    selected={columnFilters[col.colKey] ?? []}
+                    onFilterChange={setColumnFilter}
+                  />
+                ))}
                 <th className="text-center px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
