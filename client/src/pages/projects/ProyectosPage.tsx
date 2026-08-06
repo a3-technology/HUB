@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, FolderKanban, Save, Trash2, ListTodo } from 'lucide-react'
 import { projectsApi, employeeDirectoryApi, resourcesApi } from '../../lib/api'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
@@ -63,6 +64,7 @@ function statusLabel(status: string) {
 
 export function ProyectosPage() {
   const toast = useToast()
+  const navigate = useNavigate()
 
   const canCreate = usePermission('projects.projects.create')
   const canUpdate = usePermission('projects.projects.update')
@@ -306,10 +308,14 @@ export function ProyectosPage() {
                       {fmtDate(p.startDate)} — {fmtDate(p.endDate)}
                     </td>
                     <td className="px-5 py-2 text-center align-middle">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                      <button
+                        onClick={() => navigate(`/projects/tareas?projectId=${p.id}`)}
+                        title="Ver tareas del proyecto"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer"
+                      >
                         <ListTodo className="w-3.5 h-3.5" />
                         {p.taskCount}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-5 py-2 text-right align-middle text-slate-600 dark:text-slate-300">
                       {fmtMoney(p.budget)}

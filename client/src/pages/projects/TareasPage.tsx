@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, ListTodo, Save, Trash2, List, Kanban, User, CalendarDays, AlertTriangle, FileText, ListChecks, Paperclip } from 'lucide-react'
 import { tasksApi, projectsApi, employeeDirectoryApi, resourcesApi } from '../../lib/api'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
@@ -137,6 +138,7 @@ function minISO(...dates: (string | undefined)[]): string | undefined {
 
 export function TareasPage() {
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const canCreate = usePermission('projects.tasks.create')
   const canUpdate = usePermission('projects.tasks.update')
@@ -149,7 +151,7 @@ export function TareasPage() {
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch]       = useState('')
-  const [projectFilter, setProjectFilter] = useState('')
+  const [projectFilter, setProjectFilter] = useState(() => searchParams.get('projectId') ?? '')
   const [page, setPage]           = useState(1)
   const [pageSize, setPageSize]   = useState<PageSize>(10)
   const [viewMode, setViewModeState] = useState<'list' | 'kanban'>(loadViewMode)
@@ -189,6 +191,16 @@ export function TareasPage() {
 
   useEffect(() => { load() }, [mineOnly])
   useEffect(() => { loadOptions() }, [])
+
+  // Si se llega desde el badge de tareas de un proyecto (?projectId=...), aplica el filtro y limpia la URL.
+  useEffect(() => {
+    const pid = searchParams.get('projectId')
+    if (pid) {
+      setProjectFilter(pid); setPage(1)
+      setSearchParams(prev => { prev.delete('projectId'); return prev }, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const projectOptions = useMemo(() => projectList.map(p => ({ value: p.id, label: `${p.code} — ${p.name}` })), [projectList])
   const selectedProject = projectList.find(p => p.id === form.projectId)
