@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, ListTodo, Save, Trash2, List, Kanban, User, CalendarDays, AlertTriangle, FileText, ListChecks, Paperclip } from 'lucide-react'
+import { Plus, Search, Pencil, ToggleLeft, ToggleRight, RefreshCw, ListTodo, Save, Trash2, List, Kanban, User, CalendarDays, AlertTriangle, FileText, ListChecks, Paperclip, Eye } from 'lucide-react'
 import { tasksApi, projectsApi, employeeDirectoryApi, resourcesApi } from '../../lib/api'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Pagination, usePagination, type PageSize } from '../../components/Pagination'
@@ -11,6 +11,7 @@ import { TaskDependencies } from '../../components/TaskDependencies'
 import { TaskComments } from '../../components/TaskComments'
 import { TaskAttachments } from '../../components/TaskAttachments'
 import { TaskChecklist } from '../../components/TaskChecklist'
+import { TaskDetailOffcanvas } from '../../components/TaskDetailOffcanvas'
 import { useToast } from '../../context/ToastContext'
 import { useModalTransition } from '../../hooks/useModalTransition'
 import { usePermission } from '../../hooks/usePermission'
@@ -170,6 +171,9 @@ export function TareasPage() {
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null)
   const { mounted: modalMounted, closing: modalClosing } = useModalTransition(modalOpen)
 
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
+
   const load = async (silent = false) => {
     silent ? setRefreshing(true) : setLoading(true)
     try {
@@ -251,6 +255,14 @@ export function TareasPage() {
     setFormError(null); setFormTab('detalles'); setModalOpen(true)
   }
   const closeModal = () => { setModalOpen(false); setEditing(null); setFormError(null) }
+
+  const openDetail = (t: Task) => { setDetailTask(t); setDetailOpen(true) }
+  const handleEditFromDetail = () => {
+    if (!detailTask) return
+    const task = detailTask
+    setDetailOpen(false)
+    setTimeout(() => openEdit(task), 160)
+  }
 
   const handleSave = async () => {
     if (!form.projectId) { setFormTab('detalles'); setFormError('El proyecto es requerido.'); return }
@@ -470,7 +482,10 @@ export function TareasPage() {
                       {globalIndex(i)}
                     </td>
                     <td className="px-5 py-2 text-left align-middle">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">{t.name}</p>
+                      <button type="button" onClick={() => openDetail(t)}
+                        className="font-semibold text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        {t.name}
+                      </button>
                     </td>
                     <td className="px-5 py-2 text-slate-600 dark:text-slate-300 text-left align-middle">
                       {t.projectCode} — {t.projectName}
@@ -502,6 +517,13 @@ export function TareasPage() {
                     </td>
                     <td className="px-5 py-2 align-middle">
                       <div className="flex items-center justify-center gap-0.5">
+                        <button
+                          onClick={() => openDetail(t)}
+                          title="Ver información"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
                         {canUpdate && (
                           <button
                             onClick={() => openEdit(t)}
@@ -578,7 +600,7 @@ export function TareasPage() {
                         draggable={canUpdate}
                         onDragStart={() => setDraggedId(t.id)}
                         onDragEnd={() => setDraggedId(null)}
-                        onClick={() => openEdit(t)}
+                        onClick={() => openDetail(t)}
                         className={`group bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 p-3 cursor-grab active:cursor-grabbing shadow-sm hover:shadow transition-shadow relative ${draggedId === t.id ? 'opacity-40' : ''}`}
                       >
                         {canDelete && (
@@ -795,6 +817,14 @@ export function TareasPage() {
         cancelLabel="Cancelar"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <TaskDetailOffcanvas
+        open={detailOpen}
+        task={detailTask}
+        canEdit={canUpdate}
+        onClose={() => setDetailOpen(false)}
+        onEdit={handleEditFromDetail}
       />
     </div>
   )
