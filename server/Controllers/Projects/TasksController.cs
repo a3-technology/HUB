@@ -38,9 +38,28 @@ namespace server.Controllers
         private Guid CurrentUserId =>
             Guid.TryParse(User.FindFirst("sub")?.Value, out var id) ? id : Guid.Empty;
 
+        /// <summary>Resuelve el empleado vinculado al usuario en sesión (null si no tiene uno).</summary>
+        private Guid? CurrentEmployeeId()
+        {
+            var p = new DynamicParameters();
+            p.Add("@UserId", CurrentUserId);
+            return _repo.Get<DBO.EmployeeLookupResult>("dbo.SP_GetEmployeeIdByUserId", p)?.EmployeeId;
+        }
+
+        /// <summary>
+        /// true si el usuario en sesión puede ver todas las tareas (rol administrador).
+        /// Sin este permiso, un usuario solo ve las tareas de proyectos donde es líder o
+        /// miembro (pm.Resources) — ver <see cref="GetAll"/>, <see cref="GetSchedule"/> y <see cref="GetById"/>.
+        /// </summary>
+        private bool HasManageAll =>
+            (User.FindFirst("permissions")?.Value ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("projects.projects.manage-all");
+
         /// <summary>
         /// Retorna la lista de tareas con filtros opcionales por proyecto, estado activo, estado de flujo,
-        /// y "solo mis tareas" (asignadas al empleado vinculado al usuario autenticado).
+        /// y "solo mis tareas" (asignadas al empleado vinculado al usuario autenticado). Sin
+        /// projects.projects.manage-all, solo retorna tareas de proyectos donde el usuario es líder o miembro.
         /// </summary>
         /// <param name="projectId">Filtra las tareas de un proyecto específico.</param>
         /// <param name="active">true = solo activas | false = solo inactivas | omitir = todas.</param>
@@ -50,11 +69,15 @@ namespace server.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] Guid? projectId = null, [FromQuery] bool? active = null, [FromQuery] string? status = null, [FromQuery] bool mine = false)
         {
+            var hasManageAll = HasManageAll;
+
             var p = new DynamicParameters();
             p.Add("@ProjectId", projectId);
             p.Add("@IsActive",  active.HasValue ? (object)active.Value : null);
             p.Add("@Status",    status);
             p.Add("@ForUserId", mine ? CurrentUserId : (object?)null);
+            p.Add("@ViewerEmployeeId", hasManageAll ? null : CurrentEmployeeId());
+            p.Add("@RestrictToOwn", !hasManageAll);
 
             var result = _repo.GetAll<PM.TaskResponse>("pm.SP_GetTasks", p).ToList();
 
@@ -65,30 +88,40 @@ namespace server.Controllers
         }
 
         /// <summary>
-        /// Retorna las tareas con fechas definidas para pintar el Gantt del Cronograma.
+        /// Retorna las tareas con fechas definidas para pintar el Gantt del Cronograma. Sin
+        /// projects.projects.manage-all, solo incluye proyectos donde el usuario es líder o miembro.
         /// </summary>
         /// <param name="projectId">Filtra el cronograma de un proyecto específico (opcional).</param>
         /// <returns>200 con la lista de <see cref="PM.ScheduleItemResponse"/>.</returns>
         [HttpGet("schedule")]
         public IActionResult GetSchedule([FromQuery] Guid? projectId = null)
         {
+            var hasManageAll = HasManageAll;
+
             var p = new DynamicParameters();
             p.Add("@ProjectId", projectId);
+            p.Add("@ViewerEmployeeId", hasManageAll ? null : CurrentEmployeeId());
+            p.Add("@RestrictToOwn", !hasManageAll);
 
             var result = _repo.GetAll<PM.ScheduleItemResponse>("pm.SP_GetProjectSchedule", p);
             return Ok(result);
         }
 
         /// <summary>
-        /// Retorna una tarea por su identificador único.
+        /// Retorna una tarea por su identificador único. Sin projects.projects.manage-all,
+        /// solo si el usuario es líder o miembro del proyecto de la tarea.
         /// </summary>
         /// <param name="id">Identificador único (GUID) de la tarea.</param>
-        /// <returns>200 con <see cref="PM.TaskResponse"/> o 404 si no existe.</returns>
+        /// <returns>200 con <see cref="PM.TaskResponse"/> o 404 si no existe o no es visible para el usuario.</returns>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
+            var hasManageAll = HasManageAll;
+
             var p = new DynamicParameters();
             p.Add("@Id", id);
+            p.Add("@ViewerEmployeeId", hasManageAll ? null : CurrentEmployeeId());
+            p.Add("@RestrictToOwn", !hasManageAll);
 
             var result = _repo.Get<PM.TaskResponse>("pm.SP_GetTaskById", p);
             if (result is null)
